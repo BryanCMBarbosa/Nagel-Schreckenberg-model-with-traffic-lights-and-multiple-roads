@@ -1,0 +1,22 @@
+{
+  "simulation":
+  {
+      "roads":
+      [
+          {
+              "roadID": 1,
+              "roadSize": 80,
+              "maxSpeed": 8,
+              "brakeProbability": 0.2,
+              "changingRoadProbability": 0.15,
+              "lanes":
+              [
+                  {
+                      "laneID": 1,
+                      "numCars": 25
+                  }
+              ]
+          }
+      ]
+  }
+}
