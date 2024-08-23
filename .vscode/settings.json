@@ -1,5 +1,5 @@
 {
-    "workbench.colorTheme": "One Dark Pro",
+    "workbench.colorTheme": "Dracula",
     "files.associations": {
         "map": "cpp",
         "vector": "cpp",

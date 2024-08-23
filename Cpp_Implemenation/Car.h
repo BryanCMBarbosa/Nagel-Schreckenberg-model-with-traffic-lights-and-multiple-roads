@@ -13,9 +13,12 @@ public:
     char side;
     int distanceToSharedSection;
     int sharedSectionIndex;
-    Road* targetRoad;
+    std::pair<int, Road*> indexAndTargetRoad;
 
     Car(int pos);
+    Car(Car&& other) noexcept;
+    Car& operator=(Car&& other) noexcept;
+    ~Car();
 };
 
 #endif

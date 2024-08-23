@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <memory>
+#include <iostream>
+#include <random>
 #include "RoadSection.h"
 #include "RandomNumberGenerator.h"
 
@@ -12,20 +14,23 @@ class Road
 {
 public:
     int roadID;
-    std::vector<std::shared_ptr<RoadSection>> sections;
-    std::vector<Road*> connectedRoads;
+    int roadSize;
+    std::vector<RoadSection> sections;
+    std::vector<Road*> connectedRoads;  //Roads that are connected through shared sections
     int maxSpeed;
     double brakeProb;
     double changingRoadProb;
+    int initialNumCars;
     RandomNumberGenerator& rng;
 
-    Road(int id, const std::vector<std::shared_ptr<RoadSection>>& sections, int maxSpd, double brakeP, double changingP, RandomNumberGenerator& generator);
+    Road(int id, int roadSize, int maxSpd, double brakeP, double changingP, int initialNumCars, RandomNumberGenerator& gen);
     void setupSections();
     void simulateStep();
     void moveCars();
-    int calculateDistanceToNextCarOrTrafficLight(const std::shared_ptr<RoadSection>& currentSection, int currentPosition);
-    int calculateDistanceToNextCarOrTrafficLightFromStart(const std::shared_ptr<RoadSection>& section, int start);
-    Road* decideTargetRoad(const std::shared_ptr<RoadSection>& section);
+    void addCars(int numCars, int position = -1);
+    int calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, int currentPosition);
+    int calculateDistanceToSharedSection(RoadSection& currentSection);
+    std::pair<int, Road*> decideTargetRoad(RoadSection& section);
 };
 
 #endif

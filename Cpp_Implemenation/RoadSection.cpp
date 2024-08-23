@@ -1,13 +1,16 @@
 #include "RoadSection.h"
 #include <algorithm>
 
-RoadSection::RoadSection() : currentCar(nullptr), isSharedSection(false), road(nullptr)
-{
-}
+RoadSection::RoadSection() 
+    : currentCar(nullptr), isSharedSection(false), road(nullptr), trafficLight(nullptr) {}
 
-RoadSection::~RoadSection()
+RoadSection::RoadSection(Road* road) 
+    : currentCar(nullptr), isSharedSection(false), road(road), trafficLight(nullptr) {}
+
+
+void RoadSection::addCar()
 {
-    delete currentCar;
+    currentCar = std::make_unique<Car>(index);
 }
 
 void RoadSection::connect(std::shared_ptr<RoadSection> otherSection)

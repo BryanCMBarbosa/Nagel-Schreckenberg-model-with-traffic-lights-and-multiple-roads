@@ -15,3 +15,8 @@ double RandomNumberGenerator::getRandomDouble()
     std::uniform_real_distribution<double> distrib(0.0, 1.0);
     return distrib(generator);
 }
+
+std::mt19937& RandomNumberGenerator::getGenerator()
+{
+    return generator;
+}

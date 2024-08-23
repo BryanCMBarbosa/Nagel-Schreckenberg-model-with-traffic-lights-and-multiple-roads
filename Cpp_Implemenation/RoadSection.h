@@ -10,17 +10,20 @@ class Road;
 class TrafficLight;
 
 class RoadSection : public std::enable_shared_from_this<RoadSection>
-    {
+{
 public:
-    Car* currentCar;
+    std::unique_ptr<Car> currentCar;
     std::vector<std::shared_ptr<RoadSection>> connectedSections;
     bool isSharedSection;
     Road* road;
     TrafficLight* trafficLight;
-
+    int index;
 
     RoadSection();
-    virtual ~RoadSection();
+
+    RoadSection(Road* road);
+
+    void addCar();
 
     void connect(std::shared_ptr<RoadSection> otherSection);
     void disconnect(std::shared_ptr<RoadSection> otherSection);
