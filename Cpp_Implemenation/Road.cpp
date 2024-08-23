@@ -156,13 +156,28 @@ int Road::calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, 
     while (distance < count)
     {
         int index = (currentPosition + distance) % count;
-        auto& section = sections[index];
-        if (section.currentCar || (section.trafficLight && !section.trafficLight->state))
+        if (sections[index].currentCar || (sections[index].trafficLight && !sections[index].trafficLight->state) || anyCarInSharedSection(sections[index]))
         {
             return distance;  //Return the distance to the first car or red traffic light found.
         }
         ++distance;
     }
     return count; //Return the road length if no obstacles are found.
+}
+
+bool Road::anyCarInSharedSection(RoadSection& section)
+{
+    if (section.isSharedSection)
+    {
+        int connSectionsNumber = section.connectedSections.size();
+        for (int i = 0; i < connSectionsNumber; i++)
+        {
+            if (section.connectedSections[i]->currentCar)
+            {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 

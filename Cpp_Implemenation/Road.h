@@ -29,6 +29,7 @@ public:
     void moveCars();
     void addCars(int numCars, int position = -1);
     int calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, int currentPosition);
+    bool anyCarInSharedSection(RoadSection& section);
     int calculateDistanceToSharedSection(RoadSection& currentSection);
     std::pair<int, Road*> decideTargetRoad(RoadSection& section);
 };
