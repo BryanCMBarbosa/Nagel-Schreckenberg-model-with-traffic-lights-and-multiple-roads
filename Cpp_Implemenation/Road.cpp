@@ -70,12 +70,16 @@ void Road::moveCars()
             if (sections[i].currentCar->speed > distanceToSharedSection)
             {
                 int remainingMove = sections[i].currentCar->speed - distanceToSharedSection;
-                newPos = (sections[i].currentCar->indexAndTargetRoad.first + remainingMove) % sections[i].currentCar->indexAndTargetRoad.second->roadSize;
-                sections[i].currentCar->indexAndTargetRoad.second->sections[newPos].currentCar = std::move(sections[i].currentCar);
-                sections[i].currentCar->indexAndTargetRoad.second->sections[newPos].currentCar->position = newPos;
+                Road* newRoad = sections[i].currentCar->indexAndTargetRoad.second;
+                newPos = (sections[i].currentCar->indexAndTargetRoad.first + remainingMove) % newRoad->roadSize;
+                newRoad->sections[newPos].currentCar = std::move(sections[i].currentCar);
+                newRoad->sections[newPos].currentCar->position = newPos;
                 sections[i].currentCar = nullptr;
-                sections[i].currentCar->indexAndTargetRoad.second->sections[newPos].currentCar->willChangeRoad = false;
-                sections[i].currentCar->indexAndTargetRoad.second->sections[newPos].currentCar->roadChangeDecisionMade = false;
+                newRoad->sections[newPos].currentCar->willChangeRoad = false;
+                newRoad->sections[newPos].currentCar->roadChangeDecisionMade = false;
+                
+                if (newRoad->sections[newPos].currentCar->speed > newRoad->maxSpeed)
+                    newRoad->sections[newPos].currentCar->speed = newRoad->maxSpeed;
             }
         }
         else if (sections[i].currentCar && sections[i].currentCar->speed > 0)
