@@ -19,7 +19,7 @@ void Road::setupSections()
     sections.reserve(roadSize);
     for (int i = 0; i < roadSize; i++)
     {
-        sections.emplace_back(this);
+        sections.emplace_back(this, i);
     }
 }
 
@@ -36,17 +36,18 @@ void Road::simulateStep()
             }
 
             //Decision logic for changing roads at shared sections
-            if (!sections[i].currentCar->roadChangeDecisionMade && calculateDistanceToSharedSection(sections[i]) != -1 && rng.getRandomDouble() < changingRoadProb)
+            int distanceSharedSection = calculateDistanceToSharedSection(sections[i]);
+            if (!sections[i].currentCar->roadChangeDecisionMade && distanceSharedSection != -1 && rng.getRandomDouble() < changingRoadProb)
             {
                 sections[i].currentCar->indexAndTargetRoad = decideTargetRoad(sections[i]);
                 sections[i].currentCar->roadChangeDecisionMade = true;
             }
 
             //Braking logic
-            int distanceToNextCar = calculateDistanceToNextCarOrTrafficLight(sections[i], i);
+            int distanceToNextCar = calculateDistanceToNextCarOrTrafficLight(sections[i], i, distanceSharedSection);
             if (distanceToNextCar < sections[i].currentCar->speed)
             {
-                sections[i].currentCar->speed = distanceToNextCar;
+                sections[i].currentCar->speed = distanceToNextCar; //checar se deve ser distance ou distance-1
             }
 
             //Random brake logics
@@ -153,19 +154,51 @@ int Road::calculateDistanceToSharedSection(RoadSection& currentSection)
     return -1;
 }
 
-int Road::calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, int currentPosition)
+int Road::calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, int currentPosition, int distanceSharedSection)
 {
     int distance = 0;
     int count = sections.size();  //Cache the size of the sections for efficiency.
-    while (distance < count)
+    int index;
+    if (currentSection.currentCar->roadChangeDecisionMade and currentSection.currentCar->willChangeRoad)
     {
-        int index = (currentPosition + distance) % count;
-        if (sections[index].currentCar || (sections[index].trafficLight && !sections[index].trafficLight->state) || anyCarInSharedSection(sections[index]))
+        while (distance <= distanceSharedSection)
         {
-            return distance;  //Return the distance to the first car or red traffic light found.
+            index = (currentPosition + distance) % count;
+            if (sections[index].currentCar || (sections[index].trafficLight && !sections[index].trafficLight->state) || anyCarInSharedSection(sections[index]))
+            {
+                return distance;  //Return the distance to the first car or red traffic light found.
+            }
+            ++distance;
         }
-        ++distance;
+        int speed = sections[index].currentCar->speed;
+        int remainingMove = speed - distanceSharedSection;
+        if (remainingMove > 0)
+        {
+            Road* newRoad = sections[index].currentCar->indexAndTargetRoad.second;
+            index = (sections[index].currentCar->indexAndTargetRoad.first + 1) % newRoad->sections.size();
+            while (distance < speed)
+            {
+                if (newRoad->sections[index].currentCar || (newRoad->sections[index].trafficLight && !newRoad->sections[index].trafficLight->state) || anyCarInSharedSection(newRoad->sections[index]))
+                {
+                    return distance;
+                }
+                ++distance;
+            }
+        }
     }
+    else
+    {
+        while (distance < count)
+        {
+            index = (currentPosition + distance) % count;
+            if (sections[index].currentCar || (sections[index].trafficLight && !sections[index].trafficLight->state) || anyCarInSharedSection(sections[index]))
+            {
+                return distance;  //Return the distance to the first car or red traffic light found.
+            }
+            ++distance;
+        }
+    }
+    
     return count; //Return the road length if no obstacles are found.
 }
 

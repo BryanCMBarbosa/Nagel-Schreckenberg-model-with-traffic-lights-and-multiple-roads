@@ -21,7 +21,7 @@ public:
 
     RoadSection();
 
-    RoadSection(Road* road);
+    RoadSection(Road* road, int index);
 
     void addCar();
 

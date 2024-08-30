@@ -2,10 +2,10 @@
 #include <algorithm>
 
 RoadSection::RoadSection() 
-    : currentCar(nullptr), isSharedSection(false), road(nullptr), trafficLight(nullptr) {}
+    : currentCar(nullptr), isSharedSection(false), road(nullptr), trafficLight(nullptr), index(0) {}
 
-RoadSection::RoadSection(Road* road) 
-    : currentCar(nullptr), isSharedSection(false), road(road), trafficLight(nullptr) {}
+RoadSection::RoadSection(Road* road, int index) 
+    : currentCar(nullptr), isSharedSection(false), road(road), trafficLight(nullptr), index(index) {}
 
 
 void RoadSection::addCar()
