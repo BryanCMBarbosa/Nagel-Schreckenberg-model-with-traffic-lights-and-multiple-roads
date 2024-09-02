@@ -5,7 +5,8 @@ Car::Car(int pos)
     : position(pos), 
       speed(0), 
       willChangeRoad(false), 
-      roadChangeDecisionMade(false), 
+      roadChangeDecisionMade(false),
+      willSurpassSharedSection(false), 
       indexAndTargetRoad(0, nullptr)
       {}
 
@@ -14,6 +15,7 @@ Car::Car(Car&& other) noexcept
       position(other.position), 
       willChangeRoad(other.willChangeRoad), 
       roadChangeDecisionMade(other.roadChangeDecisionMade), 
+      willSurpassSharedSection(other.willSurpassSharedSection),
       side(other.side), 
       distanceToSharedSection(other.distanceToSharedSection), 
       sharedSectionIndex(other.sharedSectionIndex), 
@@ -31,6 +33,7 @@ Car& Car::operator=(Car&& other) noexcept
         position = other.position;
         willChangeRoad = other.willChangeRoad;
         roadChangeDecisionMade = other.roadChangeDecisionMade;
+        willSurpassSharedSection = other.willSurpassSharedSection;
         side = other.side;
         distanceToSharedSection = other.distanceToSharedSection;
         sharedSectionIndex = other.sharedSectionIndex;

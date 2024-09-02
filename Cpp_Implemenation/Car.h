@@ -12,6 +12,7 @@ public:
     int position;
     bool willChangeRoad;
     bool roadChangeDecisionMade;
+    bool willSurpassSharedSection;
     char side;
     int distanceToSharedSection;
     int sharedSectionIndex;

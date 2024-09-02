@@ -5,13 +5,6 @@ Road::Road(int id, int roadSize, int maxSpd, double brakeP, double changingP, in
 {
     setupSections();
     addCars(initialNumCars);
-    for (auto & s : sections)
-    {
-        if (s.currentCar)
-        {
-            std::cout << "There is a car here." << std::endl; //Confirms that there's a Car in the position
-        }
-    }
 }
 
 void Road::setupSections()
@@ -41,19 +34,28 @@ void Road::simulateStep()
             {
                 sections[i].currentCar->indexAndTargetRoad = decideTargetRoad(sections[i]);
                 sections[i].currentCar->roadChangeDecisionMade = true;
+                if (sections[i].currentCar->indexAndTargetRoad.first == -1)
+                    sections[i].currentCar->willChangeRoad = false;
+                else
+                    sections[i].currentCar->willChangeRoad = true;
             }
 
             //Braking logic
             int distanceToNextCar = calculateDistanceToNextCarOrTrafficLight(sections[i], i, distanceSharedSection);
             if (distanceToNextCar < sections[i].currentCar->speed)
             {
-                sections[i].currentCar->speed = distanceToNextCar; //checar se deve ser distance ou distance-1
+                sections[i].currentCar->speed = distanceToNextCar;
             }
 
             //Random brake logics
             if (sections[i].currentCar->speed >= 0 && rng.getRandomDouble() < brakeProb)
             {
                 sections[i].currentCar->speed--;
+            }
+
+            if (sections[i].currentCar->speed > distanceSharedSection)
+            {
+                sections[i].currentCar->willSurpassSharedSection = true;
             }
         }
     }
@@ -78,6 +80,7 @@ void Road::moveCars()
                 sections[i].currentCar = nullptr;
                 newRoad->sections[newPos].currentCar->willChangeRoad = false;
                 newRoad->sections[newPos].currentCar->roadChangeDecisionMade = false;
+                newRoad->sections[newPos].currentCar->willSurpassSharedSection = false;
                 
                 if (newRoad->sections[newPos].currentCar->speed > newRoad->maxSpeed)
                     newRoad->sections[newPos].currentCar->speed = newRoad->maxSpeed;
@@ -89,6 +92,13 @@ void Road::moveCars()
             sections[newPos].currentCar = std::move(sections[i].currentCar);
             sections[newPos].currentCar->position = newPos;
             sections[i].currentCar = nullptr;
+
+            if (sections[i].currentCar->willSurpassSharedSection)
+            {
+                sections[i].currentCar->willChangeRoad = false;
+                sections[i].currentCar->roadChangeDecisionMade = false;
+                sections[i].currentCar->willSurpassSharedSection = false;
+            }
         }
     }
 }
@@ -159,7 +169,7 @@ int Road::calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, 
     int distance = 0;
     int count = sections.size();  //Cache the size of the sections for efficiency.
     int index;
-    if (currentSection.currentCar->roadChangeDecisionMade and currentSection.currentCar->willChangeRoad)
+    if (currentSection.currentCar->roadChangeDecisionMade and currentSection.currentCar->willChangeRoad and currentSection.currentCar->indexAndTargetRoad.first != -1)
     {
         while (distance <= distanceSharedSection)
         {
@@ -217,4 +227,3 @@ bool Road::anyCarInSharedSection(RoadSection& section)
     }
     return false;
 }
-

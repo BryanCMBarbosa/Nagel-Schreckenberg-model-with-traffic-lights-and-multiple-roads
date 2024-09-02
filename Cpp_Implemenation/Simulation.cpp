@@ -27,7 +27,6 @@ void Simulation::setup()
     }
 
     const auto& roadsConfig = config["simulation"]["roads"];
-    std::cout << "roadsConfig Size: " << roadsConfig.size() << std::endl;
 
     for (const auto& roadConfig : roadsConfig)
     {
