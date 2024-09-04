@@ -21,6 +21,7 @@ public:
     double brakeProb;
     double changingRoadProb;
     int initialNumCars;
+    std::vector<int> carsPositions;
     RandomNumberGenerator& rng;
 
     Road(int id, int roadSize, int maxSpd, double brakeP, double changingP, int initialNumCars, RandomNumberGenerator& gen);

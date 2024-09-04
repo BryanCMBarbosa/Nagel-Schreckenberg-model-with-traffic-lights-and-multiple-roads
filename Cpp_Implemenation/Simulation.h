@@ -12,6 +12,8 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <chrono>     // For std::chrono::milliseconds
+#include <thread>     // For std::this_thread::sleep_for
 
 class Simulation
 {
@@ -19,6 +21,8 @@ private:
     nlohmann::json config;
     std::vector<Road> roads;
     RandomNumberGenerator rng;
+    unsigned long long episodes;
+    bool undefinedDuration;
 
 public:
     Simulation(const std::string& configFilePath);

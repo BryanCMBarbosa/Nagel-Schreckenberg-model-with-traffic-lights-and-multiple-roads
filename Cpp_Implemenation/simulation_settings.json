@@ -1,16 +1,17 @@
 {
   "simulation":
   {
-      "roads":
-      [
-          {
-              "roadID": 1,
-              "roadSize": 40,
-              "maxSpeed": 8,
-              "brakeProbability": 0.2,
-              "changingRoadProbability": 0.15,
-              "numCars": 8
-          }
-      ]
+    "episodes": 20,
+    "roads":
+    [
+        {
+            "roadID": 1,
+            "roadSize": 20,
+            "maxSpeed": 8,
+            "brakeProbability": 0.2,
+            "changingRoadProbability": 0.15,
+            "numCars": 3
+        }
+    ]
   }
 }

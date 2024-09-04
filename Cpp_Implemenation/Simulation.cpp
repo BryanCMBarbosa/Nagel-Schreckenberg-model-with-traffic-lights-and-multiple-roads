@@ -26,6 +26,11 @@ void Simulation::setup()
         throw std::runtime_error("Invalid configuration: missing 'simulation' or 'roads' key.");
     }
 
+    if (config["simulation"].contains("episodes"))
+        episodes = config["simulation"]["episodes"];
+    else
+        undefinedDuration = true;
+
     const auto& roadsConfig = config["simulation"]["roads"];
 
     for (const auto& roadConfig : roadsConfig)
@@ -74,21 +79,31 @@ void Simulation::printSimulationSettings() const
 void Simulation::run()
 {
     std::cout << "Running simulation...\n";
-    for (auto& road : roads)
+    int numberRoads = roads.size();
+    if (undefinedDuration)
     {
-        printRoadStates();
-        road.simulateStep();
+
+    }
+    else
+    {
+        for (unsigned long long i = 0; i < episodes; i++)
+        {
+            for (int i = 0; i < numberRoads; i++)
+            {
+                std::sort(roads[i].carsPositions.begin(), roads[i].carsPositions.end());
+                printRoadStates();
+                roads[i].simulateStep();
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        }
     }
 }
 
 void Simulation::printRoadStates() const
 {
     int numberOfRoads = roads.size();
-    std::cout << "Road States at Current Simulation Step:\n";
     for (int roadIndex = 0; roadIndex < numberOfRoads; roadIndex++)
     {
-        std::cout << "Road ID: " << roads[roadIndex].roadID << ", Size: " << roads[roadIndex].sections.size() << "\n";
-
         std::stringstream tlLine;  //Line for traffic lights
         std::stringstream carLine; //Line for cars
 
