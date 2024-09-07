@@ -50,6 +50,28 @@ void Simulation::setup()
 
         roads.emplace_back(roadID, roadSize, maxSpeed, brakeProb, changeProb, numCars, rng);
     }
+    
+    const auto& sharedSections = config["simulation"]["sharedSections"];
+    for (const auto& sharedSection : sharedSections)
+    {
+        int roadID = sharedSection["roadID"];
+        int index = sharedSection["index"];
+        std::vector<std::pair<int, Road*>> connectedRoads;
+        connectedRoads.push_back(std::make_pair(index, &roads[roadID])); //assumes that roadID == index
+
+        const auto& otherConnectedRoads = sharedSection["sharedWith"];
+        for (const auto& otherConnectedRoad : otherConnectedRoads)
+        {
+            int otherConnRoadID = otherConnectedRoad["roadID"];
+            int otherConnRoadSection = otherConnectedRoad["index"];
+            connectedRoads.push_back(std::make_pair(otherConnRoadSection, &roads[otherConnRoadID]));
+        }
+
+        for (const auto& connectedRoad : connectedRoads)
+        {
+            connectedRoad.second->sections[connectedRoad.first].connect(&connectedRoad.second->sections[connectedRoad.first]);
+        }
+    }
 
     printSimulationSettings();
 }
@@ -122,7 +144,7 @@ void Simulation::printRoadStates() const
             // Car status
             if (roads[roadIndex].sections[sectionIndex].currentCar)
             {
-                carLine << " 1 ";  //Car is present
+                carLine << " " << roads[roadIndex].roadID << " ";  //Car is present
             }
             else
             {

@@ -2,18 +2,17 @@
 #define ROADSECTION_H
 
 #include <vector>
-#include <memory>
 #include "Car.h"
 #include "TrafficLight.h"
 
 class Road; 
 class TrafficLight;
 
-class RoadSection : public std::enable_shared_from_this<RoadSection>
+class RoadSection
 {
 public:
-    std::unique_ptr<Car> currentCar;
-    std::vector<std::shared_ptr<RoadSection>> connectedSections;
+    Car* currentCar;  // Now using a raw pointer to Car
+    std::vector<RoadSection*> connectedSections;
     bool isSharedSection;
     Road* road;
     TrafficLight* trafficLight;
@@ -25,8 +24,10 @@ public:
 
     void addCar();
 
-    void connect(std::shared_ptr<RoadSection> otherSection);
-    void disconnect(std::shared_ptr<RoadSection> otherSection);
+    void connect(RoadSection* otherSection);
+    void disconnect(RoadSection* otherSection);
+
+    ~RoadSection();  // Destructor to manage cleanup if needed
 };
 
 #endif

@@ -4,14 +4,34 @@
     "episodes": 20,
     "roads":
     [
+      {
+        "roadID": 0,
+        "roadSize": 40,
+        "maxSpeed": 8,
+        "brakeProbability": 0.2,
+        "changingRoadProbability": 0.15,
+        "numCars": 6
+      },
+      {
+        "roadID": 1,
+        "roadSize": 20,
+        "maxSpeed": 4,
+        "brakeProbability": 0.2,
+        "changingRoadProbability": 0.15,
+        "numCars": 3
+      }
+    ],
+    "sharedSections":
+    [
+      {
+        "roadID": 0,
+        "index": 11,
+        "sharedWith":
         {
-            "roadID": 1,
-            "roadSize": 20,
-            "maxSpeed": 8,
-            "brakeProbability": 0.2,
-            "changingRoadProbability": 0.15,
-            "numCars": 3
+          "roadID": 1,
+          "index": 12
         }
+      }
     ]
   }
 }

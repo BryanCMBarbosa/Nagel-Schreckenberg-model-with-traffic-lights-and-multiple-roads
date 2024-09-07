@@ -76,9 +76,12 @@ void Road::moveCars()
                 int remainingMove = sections[i].currentCar->speed - calculateDistanceToSharedSection(sections[i]);
                 Road* newRoad = sections[i].currentCar->indexAndTargetRoad.second;
                 newPos = (sections[i].currentCar->indexAndTargetRoad.first + remainingMove) % newRoad->roadSize;
-                newRoad->sections[newPos].currentCar = std::move(sections[i].currentCar);
+
+                // Transfer car to new road section
+                newRoad->sections[newPos].currentCar = sections[i].currentCar;
                 newRoad->sections[newPos].currentCar->position = newPos;
                 sections[i].currentCar = nullptr;
+
                 newRoad->sections[newPos].currentCar->willChangeRoad = false;
                 newRoad->sections[newPos].currentCar->roadChangeDecisionMade = false;
                 newRoad->sections[newPos].currentCar->willSurpassSharedSection = false;
@@ -87,13 +90,13 @@ void Road::moveCars()
                     newRoad->sections[newPos].currentCar->speed = newRoad->maxSpeed;
 
                 newRoad->carsPositions.push_back(newPos);
-                //auto indexIt = std::find(carsPositions.begin(), carsPositions.end(), i);
-                //carsPositions.erase(indexIt);
             }
             else
             {
                 newPos = (i + sections[i].currentCar->speed) % sections.size();
-                sections[newPos].currentCar = std::move(sections[i].currentCar);
+
+                // Move car within the same road
+                sections[newPos].currentCar = sections[i].currentCar;
                 sections[newPos].currentCar->position = newPos;
                 sections[i].currentCar = nullptr;
 
@@ -130,20 +133,18 @@ void Road::addCars(int numCars, int position)
                 position = positionDist(rng.getGenerator());
             } while (sections[position].currentCar);
             
-            sections[position].currentCar = std::make_unique<Car>(position);
+            sections[position].currentCar = new Car(position);  // Using raw pointer allocation
             carsPositions.push_back(position);
         }
-        std::sort(carsPositions.begin(), carsPositions.end());
     }
     else
     {
         if (!sections[position].currentCar)
         {
-            sections[position].currentCar = std::make_unique<Car>(position);
+            sections[position].currentCar = new Car(position);  // Using raw pointer allocation
         }
     }
 }
-
 
 std::pair<int, Road*> Road::decideTargetRoad(RoadSection& section)
 {
