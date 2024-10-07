@@ -1,45 +1,80 @@
 #include "RoadSection.h"
 #include <algorithm>
 
-RoadSection::RoadSection() 
-    : currentCar(nullptr), isSharedSection(false), road(nullptr), trafficLight(nullptr), index(0) {}
 
-RoadSection::RoadSection(Road* road, int index) 
-    : currentCar(nullptr), isSharedSection(false), road(road), trafficLight(nullptr), index(index) {}
+RoadSection::RoadSection(std::shared_ptr<Road> roadPtr, int idx)
+    : currentCar(nullptr), isSharedSection(false), road(roadPtr), trafficLight(nullptr), index(idx) {}
+
 
 RoadSection::~RoadSection()
 {
-    //Delete the car if it exists to avoid memory leaks
-    if (currentCar)
-    {
-        delete currentCar;
-        currentCar = nullptr;
-    }
 }
 
 void RoadSection::addCar()
 {
-    currentCar = new Car(index);
+    auto roadPtr = road.lock();
+    if (roadPtr)
+        currentCar = std::make_shared<Car>(index, roadPtr->roadID);
+    else
+        std::cerr << "Error: Road has expired in RoadSection." << std::endl;
 }
 
-void RoadSection::connect(RoadSection* otherSection)
+void RoadSection::connect(std::vector<std::pair<int, std::shared_ptr<Road>>> connections)
 {
-    if (otherSection && std::find(connectedSections.begin(), connectedSections.end(), otherSection) == connectedSections.end())
+    auto roadPtr = road.lock();
+    if (!roadPtr)
     {
-        connectedSections.push_back(otherSection);
-        otherSection->connectedSections.push_back(this);  // Mutual connection
-        isSharedSection = true;
-        otherSection->isSharedSection = true;
+        std::cerr << "Error: RoadSection's road has expired." << std::endl;
+        return;
+    }
+
+    int numberConnections = connections.size();
+    for (int i = 0; i < numberConnections; i++)
+    {
+        if (connections[i].second->roadID == roadPtr->roadID)
+            continue;
+
+        bool alreadyFound = false;
+
+        for (auto& existingWeakSection : connectedSections)
+        {
+            auto existingSection = existingWeakSection.lock();
+            if (existingSection)
+            {
+                auto existingRoadPtr = existingSection->road.lock();
+                if (existingRoadPtr && connections[i].second->roadID == existingRoadPtr->roadID)
+                {
+                    alreadyFound = true;
+                    break;
+                }
+            }
+        }
+        if (!alreadyFound)
+        {
+            connectedSections.push_back(connections[i].second->sections[connections[i].first]);
+            isSharedSection = true;
+        }
     }
 }
 
 void RoadSection::disconnect(RoadSection* otherSection)
 {
-    auto it = std::find(connectedSections.begin(), connectedSections.end(), otherSection);
+    auto it = std::find_if(connectedSections.begin(), connectedSections.end(),
+                           [otherSection](const std::weak_ptr<RoadSection>& weakPtr) 
+                           {
+                               auto ptr = weakPtr.lock();
+                               return ptr.get() == otherSection;
+                           });
     if (it != connectedSections.end())
     {
         connectedSections.erase(it);
-        auto it_other = std::find(otherSection->connectedSections.begin(), otherSection->connectedSections.end(), this);
+
+        auto it_other = std::find_if(otherSection->connectedSections.begin(), otherSection->connectedSections.end(),
+                                     [this](const std::weak_ptr<RoadSection>& weakPtr)
+                                     {
+                                         auto ptr = weakPtr.lock();
+                                         return ptr.get() == this;
+                                     });
         if (it_other != otherSection->connectedSections.end())
         {
             otherSection->connectedSections.erase(it_other);

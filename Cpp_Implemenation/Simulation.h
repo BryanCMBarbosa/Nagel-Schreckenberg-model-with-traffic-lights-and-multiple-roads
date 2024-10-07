@@ -11,15 +11,17 @@
 #include <memory>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <iomanip>
-#include <chrono>     // For std::chrono::milliseconds
-#include <thread>     // For std::this_thread::sleep_for
+#include <random>
+#include <chrono>
+#include <thread>
 
 class Simulation
 {
 private:
     nlohmann::json config;
-    std::vector<Road> roads;
+    std::vector<std::shared_ptr<Road>> roads;
     RandomNumberGenerator rng;
     unsigned long long episodes;
     bool undefinedDuration;
@@ -27,6 +29,7 @@ private:
 public:
     Simulation(const std::string& configFilePath);
     void setup();
+    int countTotalCars() const;
     void printSimulationSettings() const;
     void run();
     void printRoadStates() const; 

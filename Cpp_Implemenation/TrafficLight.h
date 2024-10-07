@@ -4,6 +4,8 @@
 #include "Road.h"
 using namespace std;
 
+class Road;
+
 class TrafficLight
 {
 public:

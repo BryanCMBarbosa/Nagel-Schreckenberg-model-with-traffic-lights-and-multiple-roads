@@ -2,10 +2,12 @@
 #define CAR_H
 
 #include <utility>
+#include <memory>
+#include "Road.h"
 
 class Road;
 
-class Car
+class Car : public std::enable_shared_from_this<Car>
 {
 public:
     int speed;
@@ -16,9 +18,10 @@ public:
     char side;
     int distanceToSharedSection;
     int sharedSectionIndex;
-    std::pair<int, Road*> indexAndTargetRoad;
+    int originalRoadID; 
+    std::pair<int, std::weak_ptr<Road>> indexAndTargetRoad;
 
-    Car(int pos);
+    Car(int pos, int roadID);
     Car(Car&& other) noexcept;
     Car& operator=(Car&& other) noexcept;
     ~Car();

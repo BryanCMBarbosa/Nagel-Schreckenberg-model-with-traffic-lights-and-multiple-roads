@@ -1,9 +1,4 @@
 #include "Simulation.h"
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <iomanip>
-#include <random>
 
 Simulation::Simulation(const std::string& configFilePath)
 {
@@ -36,7 +31,7 @@ void Simulation::setup()
     for (const auto& roadConfig : roadsConfig)
     {
         int roadID = roadConfig.value("roadID", 0);
-        int roadSize = roadConfig.value("roadSize", 0);
+        int roadSize = roadConfig.value("roadSize", 50);
 
         int numCars = 0;
         if (roadConfig.contains("numCars"))
@@ -48,7 +43,10 @@ void Simulation::setup()
         double brakeProb = roadConfig.value("brakeProbability", 0.1);
         double changeProb = roadConfig.value("changingRoadProbability", 0.15);
 
-        roads.emplace_back(roadID, roadSize, maxSpeed, brakeProb, changeProb, numCars, rng);
+        auto road = std::make_shared<Road>(roadID, roadSize, maxSpeed, brakeProb, changeProb, numCars, rng);
+        roads.emplace_back(road);
+        road->setupSections();
+        road->addCars(numCars);
     }
     
     const auto& sharedSections = config["simulation"]["sharedSections"];
@@ -56,24 +54,55 @@ void Simulation::setup()
     {
         int roadID = sharedSection["roadID"];
         int index = sharedSection["index"];
-        std::vector<std::pair<int, Road*>> connectedRoads;
-        connectedRoads.push_back(std::make_pair(index, &roads[roadID])); //assumes that roadID == index
+        std::vector<std::pair<int, std::shared_ptr<Road>>> connectedRoads;
 
-        const auto& otherConnectedRoads = sharedSection["sharedWith"];
-        for (const auto& otherConnectedRoad : otherConnectedRoads)
+        if (roadID >= 0 && roadID < roads.size() && index >= 0 && index < roads[roadID]->sections.size())
         {
-            int otherConnRoadID = otherConnectedRoad["roadID"];
-            int otherConnRoadSection = otherConnectedRoad["index"];
-            connectedRoads.push_back(std::make_pair(otherConnRoadSection, &roads[otherConnRoadID]));
+            connectedRoads.push_back(std::make_pair(index, roads[roadID]));
+            const auto& otherConnectedRoads = sharedSection["sharedWith"];
+
+            for (const auto& otherConnectedRoad : otherConnectedRoads)
+            {
+                int otherConnRoadID = otherConnectedRoad["roadID"];
+                int otherConnRoadSection = otherConnectedRoad["index"];
+                
+                if (otherConnRoadID >= 0 && otherConnRoadID < roads.size() &&
+                    otherConnRoadSection >= 0 && otherConnRoadSection < roads[otherConnRoadID]->sections.size())
+                {
+                    connectedRoads.push_back(std::make_pair(otherConnRoadSection, roads[otherConnRoadID]));
+                }
+                else
+                {
+                    std::cerr << "Invalid other roadID or section index: roadID=" 
+                              << otherConnRoadID << ", section=" << otherConnRoadSection << std::endl;
+                }
+            }
+
+            if (!connectedRoads.empty())
+            {
+                for (int i = 0; i < connectedRoads.size(); i++)
+                {
+                    connectedRoads[i].second->sections[connectedRoads[i].first]->connect(connectedRoads);
+                }
+            }
         }
-
-        for (const auto& connectedRoad : connectedRoads)
+        else
         {
-            connectedRoad.second->sections[connectedRoad.first].connect(&connectedRoad.second->sections[connectedRoad.first]);
+            std::cerr << "Invalid roadID or section index in sharedSection: roadID=" 
+                      << roadID << ", section=" << index << std::endl;
         }
     }
-
     printSimulationSettings();
+}
+
+int Simulation::countTotalCars() const
+{
+    int totalCars = 0;
+    for (const auto& road : roads)
+    {
+        totalCars += road->carsPositions.size();
+    }
+    return totalCars;
 }
 
 void Simulation::printSimulationSettings() const
@@ -84,13 +113,13 @@ void Simulation::printSimulationSettings() const
 
     for (const auto& road : roads)
     {
-        std::cout << std::setw(20) << "Road ID" << road.roadID << "\n";
-        std::cout << std::setw(20) << "Road Size" << road.sections.size() << "\n";
-        std::cout << std::setw(20) << "Max Speed" << road.maxSpeed << "\n";
-        std::cout << std::setw(20) << "Brake Probability" << road.brakeProb << "\n";
-        std::cout << std::setw(20) << "Changing Road Prob" << road.changingRoadProb << "\n";
+        std::cout << std::setw(20) << "Road ID" << road->roadID << "\n";
+        std::cout << std::setw(20) << "Road Size" << road->sections.size() << "\n";
+        std::cout << std::setw(20) << "Max Speed" << road->maxSpeed << "\n";
+        std::cout << std::setw(20) << "Brake Probability" << road->brakeProb << "\n";
+        std::cout << std::setw(20) << "Changing Road Prob" << road->changingRoadProb << "\n";
         std::cout << std::setw(20) << "Connected Roads";
-        for (auto connectedRoad : road.connectedRoads)
+        for (auto connectedRoad : road->connectedRoads)
         {
             std::cout << connectedRoad->roadID << " ";
         }
@@ -108,47 +137,48 @@ void Simulation::run()
     }
     else
     {
-        for (unsigned long long i = 0; i < episodes; i++)
+        printRoadStates();
+        for (unsigned long long episode = 0; episode < episodes; episode++)
         {
-            for (int i = 0; i < numberRoads; i++)
+            for (int roadIndex = 0; roadIndex < numberRoads; roadIndex++)
             {
-                std::sort(roads[i].carsPositions.begin(), roads[i].carsPositions.end());
-                printRoadStates();
-                roads[i].simulateStep();
+                std::sort(roads[roadIndex]->carsPositions.begin(), roads[roadIndex]->carsPositions.end());
+                roads[roadIndex]->simulateStep();
             }
+            printRoadStates();
             std::this_thread::sleep_for(std::chrono::milliseconds(150));
         }
     }
 }
+
 
 void Simulation::printRoadStates() const
 {
     int numberOfRoads = roads.size();
     for (int roadIndex = 0; roadIndex < numberOfRoads; roadIndex++)
     {
-        std::stringstream tlLine;  //Line for traffic lights
-        std::stringstream carLine; //Line for cars
+        std::stringstream tlLine;
+        std::stringstream carLine;
 
-        int roadSize = roads[roadIndex].sections.size();
+        int roadSize = roads[roadIndex]->sections.size();
         for (int sectionIndex = 0; sectionIndex < roadSize; sectionIndex++)
         {
-            if (roads[roadIndex].sections[sectionIndex].trafficLight)
+            if (roads[roadIndex]->sections[sectionIndex]->trafficLight)
             {
-                tlLine << (roads[roadIndex].sections[sectionIndex].trafficLight->state ? "[O]" : "[C]");
+                tlLine << (roads[roadIndex]->sections[sectionIndex]->trafficLight->state ? "[O]" : "[C]");
             }
             else
             {
-                tlLine << "   ";  //No traffic light in this section
+                tlLine << "   ";
             }
 
-            // Car status
-            if (roads[roadIndex].sections[sectionIndex].currentCar)
+            if (roads[roadIndex]->sections[sectionIndex]->currentCar)
             {
-                carLine << " " << roads[roadIndex].roadID << " ";  //Car is present
+                carLine << " " << roads[roadIndex]->sections[sectionIndex]->currentCar->originalRoadID << " ";
             }
             else
             {
-                carLine << " _ ";  //No car in this section
+                carLine << " _ ";
             }
         }
 

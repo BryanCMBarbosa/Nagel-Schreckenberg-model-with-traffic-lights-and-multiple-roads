@@ -10,13 +10,13 @@
 
 class RoadSection;
 
-class Road
+class Road : public std::enable_shared_from_this<Road>
 {
 public:
     int roadID;
     int roadSize;
-    std::vector<RoadSection> sections;
-    std::vector<Road*> connectedRoads;  //Roads that are connected through shared sections
+    std::vector<std::shared_ptr<RoadSection>> sections;
+    std::vector<std::shared_ptr<Road>> connectedRoads;  //Roads that are connected through shared sections
     int maxSpeed;
     double brakeProb;
     double changingRoadProb;
@@ -25,6 +25,8 @@ public:
     RandomNumberGenerator& rng;
 
     Road(int id, int roadSize, int maxSpd, double brakeP, double changingP, int initialNumCars, RandomNumberGenerator& gen);
+    Road(const Road&) = delete;
+    Road& operator=(const Road&) = delete;
     void setupSections();
     void simulateStep();
     void moveCars();
@@ -32,7 +34,8 @@ public:
     int calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, int currentPosition, int distanceSharedSection);
     bool anyCarInSharedSection(RoadSection& section);
     int calculateDistanceToSharedSection(RoadSection& currentSection);
-    std::pair<int, Road*> decideTargetRoad(RoadSection& section);
+    std::pair<int, std::shared_ptr<Road>> decideTargetRoad(RoadSection& section);
+    ~Road();
 };
 
 #endif

@@ -1,23 +1,23 @@
 {
   "simulation":
   {
-    "episodes": 20,
+    "episodes": 15,
     "roads":
     [
       {
         "roadID": 0,
-        "roadSize": 40,
-        "maxSpeed": 8,
+        "roadSize": 13,
+        "maxSpeed": 3,
         "brakeProbability": 0.2,
-        "changingRoadProbability": 0.15,
+        "changingRoadProbability": 0.9,
         "numCars": 6
       },
       {
         "roadID": 1,
-        "roadSize": 20,
-        "maxSpeed": 4,
+        "roadSize": 13,
+        "maxSpeed": 3,
         "brakeProbability": 0.2,
-        "changingRoadProbability": 0.15,
+        "changingRoadProbability": 0.9,
         "numCars": 3
       }
     ],
@@ -27,10 +27,12 @@
         "roadID": 0,
         "index": 11,
         "sharedWith":
-        {
-          "roadID": 1,
-          "index": 12
-        }
+        [
+          {
+            "roadID": 1,
+            "index": 12
+          }
+        ]
       }
     ]
   }

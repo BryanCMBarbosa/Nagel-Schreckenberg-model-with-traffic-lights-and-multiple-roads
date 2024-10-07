@@ -1,14 +1,16 @@
 #include "Car.h"
 #include "Road.h"
 
-Car::Car(int pos) 
+Car::Car(int pos, int roadID) 
     : position(pos), 
       speed(0), 
       willChangeRoad(false), 
       roadChangeDecisionMade(false),
       willSurpassSharedSection(false), 
-      indexAndTargetRoad(0, nullptr)
-      {}
+      indexAndTargetRoad(-1, std::weak_ptr<Road>()),
+      originalRoadID(roadID)
+{
+}
 
 Car::Car(Car&& other) noexcept 
     : speed(other.speed), 
@@ -19,10 +21,10 @@ Car::Car(Car&& other) noexcept
       side(other.side), 
       distanceToSharedSection(other.distanceToSharedSection), 
       sharedSectionIndex(other.sharedSectionIndex), 
-      indexAndTargetRoad(std::move(other.indexAndTargetRoad))
+      indexAndTargetRoad(std::move(other.indexAndTargetRoad)),
+      originalRoadID(other.originalRoadID)
 {
-    //Reset other object to a valid state
-    other.indexAndTargetRoad = std::make_pair(0, nullptr);
+    other.indexAndTargetRoad = std::make_pair(-1, std::weak_ptr<Road>());
 }
 
 Car& Car::operator=(Car&& other) noexcept 
@@ -38,8 +40,9 @@ Car& Car::operator=(Car&& other) noexcept
         distanceToSharedSection = other.distanceToSharedSection;
         sharedSectionIndex = other.sharedSectionIndex;
         indexAndTargetRoad = std::move(other.indexAndTargetRoad);
+        originalRoadID = other.originalRoadID;
 
-        other.indexAndTargetRoad = std::make_pair(0, nullptr);
+        other.indexAndTargetRoad = std::make_pair(-1, std::weak_ptr<Road>());
     }
     return *this;
 }

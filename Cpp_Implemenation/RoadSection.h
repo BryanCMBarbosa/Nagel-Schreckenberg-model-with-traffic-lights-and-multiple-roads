@@ -6,28 +6,29 @@
 #include "TrafficLight.h"
 
 class Road; 
+class Car;
 class TrafficLight;
 
-class RoadSection
+class RoadSection: public std::enable_shared_from_this<RoadSection>
 {
 public:
-    Car* currentCar;  // Now using a raw pointer to Car
-    std::vector<RoadSection*> connectedSections;
+    std::shared_ptr<Car> currentCar;
+    std::vector<std::weak_ptr<RoadSection>> connectedSections;
     bool isSharedSection;
-    Road* road;
+    std::weak_ptr<Road> road;
     TrafficLight* trafficLight;
     int index;
 
     RoadSection();
 
-    RoadSection(Road* road, int index);
+    RoadSection(std::shared_ptr<Road> road, int index);
 
     void addCar();
 
-    void connect(RoadSection* otherSection);
+    void connect(std::vector<std::pair<int, std::shared_ptr<Road>>> connections);
     void disconnect(RoadSection* otherSection);
 
-    ~RoadSection();  // Destructor to manage cleanup if needed
+    ~RoadSection();
 };
 
 #endif
