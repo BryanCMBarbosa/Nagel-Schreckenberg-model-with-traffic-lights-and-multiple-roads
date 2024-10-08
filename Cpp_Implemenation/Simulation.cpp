@@ -48,52 +48,146 @@ void Simulation::setup()
         road->setupSections();
         road->addCars(numCars);
     }
-    
-    const auto& sharedSections = config["simulation"]["sharedSections"];
-    for (const auto& sharedSection : sharedSections)
+
+    if (config["simulation"].contains("sharedSections"))
     {
-        int roadID = sharedSection["roadID"];
-        int index = sharedSection["index"];
-        std::vector<std::pair<int, std::shared_ptr<Road>>> connectedRoads;
-
-        if (roadID >= 0 && roadID < roads.size() && index >= 0 && index < roads[roadID]->sections.size())
+        const auto& sharedSections = config["simulation"]["sharedSections"];
+        for (const auto& sharedSection : sharedSections)
         {
-            connectedRoads.push_back(std::make_pair(index, roads[roadID]));
-            const auto& otherConnectedRoads = sharedSection["sharedWith"];
+            int roadID = sharedSection["roadID"];
+            int index = sharedSection["index"];
+            std::vector<std::pair<int, std::shared_ptr<Road>>> connectedRoads;
 
-            for (const auto& otherConnectedRoad : otherConnectedRoads)
+            if (roadID >= 0 && roadID < roads.size() && index >= 0 && index < roads[roadID]->sections.size())
             {
-                int otherConnRoadID = otherConnectedRoad["roadID"];
-                int otherConnRoadSection = otherConnectedRoad["index"];
-                
-                if (otherConnRoadID >= 0 && otherConnRoadID < roads.size() &&
-                    otherConnRoadSection >= 0 && otherConnRoadSection < roads[otherConnRoadID]->sections.size())
+                connectedRoads.push_back(std::make_pair(index, roads[roadID]));
+                const auto& otherConnectedRoads = sharedSection["sharedWith"];
+
+                for (const auto& otherConnectedRoad : otherConnectedRoads)
                 {
-                    connectedRoads.push_back(std::make_pair(otherConnRoadSection, roads[otherConnRoadID]));
+                    int otherConnRoadID = otherConnectedRoad["roadID"];
+                    int otherConnRoadSection = otherConnectedRoad["index"];
+
+                    if (otherConnRoadID >= 0 && otherConnRoadID < roads.size() &&
+                        otherConnRoadSection >= 0 && otherConnRoadSection < roads[otherConnRoadID]->sections.size())
+                    {
+                        connectedRoads.push_back(std::make_pair(otherConnRoadSection, roads[otherConnRoadID]));
+                    }
+                    else
+                    {
+                        std::cerr << "Invalid other roadID or section index: roadID="
+                                  << otherConnRoadID << ", section=" << otherConnRoadSection << std::endl;
+                    }
+                }
+
+                if (!connectedRoads.empty())
+                {
+                    for (size_t i = 0; i < connectedRoads.size(); i++)
+                    {
+                        connectedRoads[i].second->sections[connectedRoads[i].first]->connect(connectedRoads);
+                    }
+                }
+            }
+            else
+            {
+                std::cerr << "Invalid roadID or section index in sharedSection: roadID="
+                          << roadID << ", section=" << index << std::endl;
+            }
+        }
+    }
+
+    if (config["simulation"].contains("trafficLights"))
+    {
+        const auto& trafficLightsConfig = config["simulation"]["trafficLights"];
+        for (const auto& trafficLightConfig : trafficLightsConfig)
+        {
+            int roadID = trafficLightConfig["roadID"];
+            if (roadID >= 0 && roadID < roads.size())
+            {
+                auto road = roads[roadID];
+                int position = trafficLightConfig["position"];
+
+                if (position >= 0 && position < road->sections.size())
+                {
+                    bool externalControl = trafficLightConfig["externalControl"];
+                    int timeOpen = trafficLightConfig.value("timeOpen", 10);
+                    bool paired = trafficLightConfig.value("paired", false);
+
+                    auto trafficLight = std::make_shared<TrafficLight>(externalControl, timeOpen);
+
+                    if (paired)
+                    {
+                        if (trafficLightConfig.contains("pairsRoads") && trafficLightConfig.contains("pairsPositions"))
+                        {
+                            const auto& pairsRoads = trafficLightConfig["pairsRoads"];
+                            const auto& pairsPositions = trafficLightConfig["pairsPositions"];
+
+                            if (pairsRoads.size() == pairsPositions.size())
+                            {
+                                for (size_t i = 0; i < pairsRoads.size(); ++i)
+                                {
+                                    int pairRoadID = pairsRoads[i];
+                                    int pairPosition = pairsPositions[i];
+
+                                    if (pairRoadID >= 0 && pairRoadID < roads.size())
+                                    {
+                                        auto pairRoad = roads[pairRoadID];
+                                        if (pairPosition >= 0 && pairPosition < pairRoad->sections.size())
+                                        {
+                                            auto pairTrafficLight = std::make_shared<TrafficLight>(externalControl, timeOpen);
+                                            trafficLight->addPairedTrafficLight(pairTrafficLight);
+                                            pairTrafficLight->addPairedTrafficLight(trafficLight);
+                                            pairRoad->sections[pairPosition]->trafficLight = pairTrafficLight;
+                                            pairRoad->trafficLights.push_back(pairTrafficLight);
+                                        }
+                                        else
+                                        {
+                                            std::cerr << "Invalid pair position: " << pairPosition << " on roadID: " << pairRoadID << std::endl;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        std::cerr << "Invalid pair roadID: " << pairRoadID << std::endl;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                std::cerr << "pairsRoads and pairsPositions sizes do not match." << std::endl;
+                            }
+                        }
+                        else
+                        {
+                            std::cerr << "Missing pairsRoads or pairsPositions in traffic light configuration." << std::endl;
+                        }
+                    }
+                    else
+                    {
+                        if (trafficLightConfig.contains("timeClosed"))
+                        {
+                            int timeClosed = trafficLightConfig["timeClosed"];
+                            trafficLight->setTimeClosed(timeClosed);
+                        }
+                    }
+
+                    road->sections[position]->trafficLight = trafficLight;
+                    road->trafficLights.push_back(trafficLight);
                 }
                 else
                 {
-                    std::cerr << "Invalid other roadID or section index: roadID=" 
-                              << otherConnRoadID << ", section=" << otherConnRoadSection << std::endl;
+                    std::cerr << "Invalid position: " << position << " on roadID: " << roadID << std::endl;
                 }
             }
-
-            if (!connectedRoads.empty())
+            else
             {
-                for (int i = 0; i < connectedRoads.size(); i++)
-                {
-                    connectedRoads[i].second->sections[connectedRoads[i].first]->connect(connectedRoads);
-                }
+                std::cerr << "Invalid roadID: " << roadID << std::endl;
             }
-        }
-        else
-        {
-            std::cerr << "Invalid roadID or section index in sharedSection: roadID=" 
-                      << roadID << ", section=" << index << std::endl;
         }
     }
+
     printSimulationSettings();
 }
+
 
 int Simulation::countTotalCars() const
 {
@@ -140,6 +234,13 @@ void Simulation::run()
         printRoadStates();
         for (unsigned long long episode = 0; episode < episodes; episode++)
         {
+            for (auto& road : roads)
+            {
+                for (auto& trafficLight : road->trafficLights)
+                {
+                    trafficLight->update();
+                }
+            }
             for (int roadIndex = 0; roadIndex < numberRoads; roadIndex++)
             {
                 std::sort(roads[roadIndex]->carsPositions.begin(), roads[roadIndex]->carsPositions.end());
@@ -151,9 +252,18 @@ void Simulation::run()
     }
 }
 
+void Simulation::clearScreen() const
+{
+    #ifdef _WIN32
+        system("CLS");
+    #else
+        system("clear");
+    #endif
+}
 
 void Simulation::printRoadStates() const
 {
+    clearScreen();  
     int numberOfRoads = roads.size();
     for (int roadIndex = 0; roadIndex < numberOfRoads; roadIndex++)
     {

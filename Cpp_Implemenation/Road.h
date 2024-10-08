@@ -6,9 +6,11 @@
 #include <iostream>
 #include <random>
 #include "RoadSection.h"
+#include "TrafficLight.h"
 #include "RandomNumberGenerator.h"
 
 class RoadSection;
+class TrafficLight;
 
 class Road : public std::enable_shared_from_this<Road>
 {
@@ -22,6 +24,7 @@ public:
     double changingRoadProb;
     int initialNumCars;
     std::vector<int> carsPositions;
+    std::vector<std::shared_ptr<TrafficLight>> trafficLights;
     RandomNumberGenerator& rng;
 
     Road(int id, int roadSize, int maxSpd, double brakeP, double changingP, int initialNumCars, RandomNumberGenerator& gen);

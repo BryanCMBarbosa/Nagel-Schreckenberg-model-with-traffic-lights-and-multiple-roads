@@ -16,7 +16,7 @@ public:
     std::vector<std::weak_ptr<RoadSection>> connectedSections;
     bool isSharedSection;
     std::weak_ptr<Road> road;
-    TrafficLight* trafficLight;
+    std::shared_ptr<TrafficLight> trafficLight;
     int index;
 
     RoadSection();

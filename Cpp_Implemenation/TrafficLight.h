@@ -1,23 +1,23 @@
-#ifndef TRAFFICLIGHT_H
-#define TRAFFICLIGHT_H
+#ifndef TRAFFIC_LIGHT_H
+#define TRAFFIC_LIGHT_H
 
-#include "Road.h"
-using namespace std;
+#include <vector>
+#include <memory>
 
-class Road;
-
-class TrafficLight
+class TrafficLight : public std::enable_shared_from_this<TrafficLight>
 {
 public:
-    int position;
+    bool externalControl;
     int timeOpen;
-    int timeClosed; //Ignored if paired with another Traffic Light
-    int nextToggle;
-    bool state;  //True for green, false for red
-    Road* road;
-    TrafficLight* pair;
+    int timeClosed; //For non-paired traffic lights
+    bool state; //true = green/open, false = red/closed
+    int timer;
+    std::vector<std::weak_ptr<TrafficLight>> pairedTrafficLights;
 
-    TrafficLight(int pos, Road* r, TrafficLight* p);
+    TrafficLight(bool externalControl, int timeOpen);
+    void addPairedTrafficLight(std::shared_ptr<TrafficLight> other);
+    void setTimeClosed(int timeClosed);
+    void update();
 };
 
 #endif

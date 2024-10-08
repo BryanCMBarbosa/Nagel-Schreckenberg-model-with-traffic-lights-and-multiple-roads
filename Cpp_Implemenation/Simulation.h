@@ -32,6 +32,7 @@ public:
     int countTotalCars() const;
     void printSimulationSettings() const;
     void run();
+    void clearScreen() const;
     void printRoadStates() const; 
 };
 

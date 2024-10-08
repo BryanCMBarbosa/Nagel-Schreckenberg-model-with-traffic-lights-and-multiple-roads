@@ -1,7 +1,7 @@
 {
   "simulation":
   {
-    "episodes": 15,
+    "episodes": 80,
     "roads":
     [
       {
@@ -30,9 +30,30 @@
         [
           {
             "roadID": 1,
-            "index": 12
+            "index": 11
           }
         ]
+      }
+    ],
+   "trafficLights":
+   [
+      {
+        "roadID": 0,
+        "position": 11,
+        "externalControl": false,
+        "timeOpen": 10,
+        "paired": true,
+        "pairsRoads": [1],
+        "pairsPositions": [11]
+      },
+      {
+        "roadID": 1,
+        "position": 11,
+        "externalControl": false,
+        "timeOpen": 15,
+        "paired": true,
+        "pairsRoads": [0],
+        "pairsPositions": [11]
       }
     ]
   }
