@@ -1,57 +1,22 @@
-// TrafficLight.cpp
 #include "TrafficLight.h"
 
-TrafficLight::TrafficLight(bool externalControl, int timeOpen)
-    : externalControl(externalControl), timeOpen(timeOpen), timeClosed(0), state(true), timer(0)
+TrafficLight::TrafficLight(bool externalControl, int timeOpen, int timeClosed)
+    : externalControl(externalControl), timeOpen(timeOpen), timeClosed(timeClosed), state(false), timer(0)
 {
 }
 
-void TrafficLight::addPairedTrafficLight(std::shared_ptr<TrafficLight> other)
+void TrafficLight::setGroup(std::shared_ptr<TrafficLightGroup> groupPtr)
 {
-    pairedTrafficLights.push_back(other);
+    group = groupPtr;
 }
 
-void TrafficLight::setTimeClosed(int timeClosed)
+void TrafficLight::turnGreen()
 {
-    this->timeClosed = timeClosed;
+    state = true;
+    timer = 0;
 }
 
-void TrafficLight::update()
+bool TrafficLight::isGreen() const
 {
-    if (!externalControl)
-    {
-        timer++;
-        if (state && timer >= timeOpen)
-        {
-            state = false;
-            timer = 0;
-
-            for (auto& weakLight : pairedTrafficLights)
-            {
-                if (auto pairedLight = weakLight.lock())
-                {
-                    pairedLight->state = true;
-                    pairedLight->timer = 0;
-                }
-            }
-        }
-        else if (!state && timer >= timeClosed)
-        {
-            state = true;
-            timer = 0;
-
-            for (auto& weakLight : pairedTrafficLights)
-            {
-                if (auto pairedLight = weakLight.lock())
-                {
-                    pairedLight->state = false;
-                    pairedLight->timer = 0;
-                }
-            }
-        }
-    }
-    else
-    {
-        //External control will come here
-    }
+    return state;
 }

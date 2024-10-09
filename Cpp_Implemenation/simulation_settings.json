@@ -35,25 +35,25 @@
         ]
       }
     ],
-   "trafficLights":
-   [
+    "trafficLights":
+    [
       {
         "roadID": 0,
-        "position": 11,
+        "position": 10,
         "externalControl": false,
         "timeOpen": 10,
+        "timeClosed": 10,
         "paired": true,
-        "pairsRoads": [1],
-        "pairsPositions": [11]
+        "groupID": 0
       },
       {
         "roadID": 1,
-        "position": 11,
+        "position": 10,
         "externalControl": false,
         "timeOpen": 15,
+        "timeClosed": 5,
         "paired": true,
-        "pairsRoads": [0],
-        "pairsPositions": [11]
+        "groupID": 0
       }
     ]
   }

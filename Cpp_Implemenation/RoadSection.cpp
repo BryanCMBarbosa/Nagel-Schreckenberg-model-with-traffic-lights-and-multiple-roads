@@ -1,5 +1,4 @@
 #include "RoadSection.h"
-#include <algorithm>
 
 RoadSection::RoadSection(std::shared_ptr<Road> roadPtr, int idx)
     : road(roadPtr), index(idx), currentCar(nullptr), trafficLight(nullptr), isSharedSection(false){}

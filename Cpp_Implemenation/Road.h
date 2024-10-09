@@ -18,7 +18,7 @@ public:
     int roadID;
     int roadSize;
     std::vector<std::shared_ptr<RoadSection>> sections;
-    std::vector<std::shared_ptr<Road>> connectedRoads;  //Roads that are connected through shared sections
+    std::vector<std::shared_ptr<Road>> connectedRoads;
     int maxSpeed;
     double brakeProb;
     double changingRoadProb;

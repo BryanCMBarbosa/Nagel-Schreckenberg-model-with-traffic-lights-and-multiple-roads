@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 #include "RandomNumberGenerator.h"
 #include "Road.h"
+#include "TrafficLightGroup.h"
 #include <vector>
 #include <set>
 #include <unordered_map>
@@ -17,11 +18,14 @@
 #include <chrono>
 #include <thread>
 
+class TrafficLightGroup;
+
 class Simulation
 {
 private:
     nlohmann::json config;
     std::vector<std::shared_ptr<Road>> roads;
+    std::vector<std::shared_ptr<TrafficLightGroup>> trafficLightGroups;
     RandomNumberGenerator rng;
     unsigned long long episodes;
     bool undefinedDuration;

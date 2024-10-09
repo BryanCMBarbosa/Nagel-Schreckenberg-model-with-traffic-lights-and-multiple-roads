@@ -111,63 +111,35 @@ void Simulation::setup()
                 {
                     bool externalControl = trafficLightConfig["externalControl"];
                     int timeOpen = trafficLightConfig.value("timeOpen", 10);
+                    int timeClosed = trafficLightConfig.value("timeClosed", 10);
                     bool paired = trafficLightConfig.value("paired", false);
 
-                    auto trafficLight = std::make_shared<TrafficLight>(externalControl, timeOpen);
+                    auto trafficLight = std::make_shared<TrafficLight>(externalControl, timeOpen, timeClosed);
 
                     if (paired)
                     {
-                        if (trafficLightConfig.contains("pairsRoads") && trafficLightConfig.contains("pairsPositions"))
+                        std::shared_ptr<TrafficLightGroup> group;
+
+                        if (trafficLightConfig.contains("groupID"))
                         {
-                            const auto& pairsRoads = trafficLightConfig["pairsRoads"];
-                            const auto& pairsPositions = trafficLightConfig["pairsPositions"];
-
-                            if (pairsRoads.size() == pairsPositions.size())
+                            int groupID = trafficLightConfig["groupID"];
+                            if (groupID >= 0 && groupID < trafficLightGroups.size())
                             {
-                                for (size_t i = 0; i < pairsRoads.size(); ++i)
-                                {
-                                    int pairRoadID = pairsRoads[i];
-                                    int pairPosition = pairsPositions[i];
-
-                                    if (pairRoadID >= 0 && pairRoadID < roads.size())
-                                    {
-                                        auto pairRoad = roads[pairRoadID];
-                                        if (pairPosition >= 0 && pairPosition < pairRoad->sections.size())
-                                        {
-                                            auto pairTrafficLight = std::make_shared<TrafficLight>(externalControl, timeOpen);
-                                            trafficLight->addPairedTrafficLight(pairTrafficLight);
-                                            pairTrafficLight->addPairedTrafficLight(trafficLight);
-                                            pairRoad->sections[pairPosition]->trafficLight = pairTrafficLight;
-                                            pairRoad->trafficLights.push_back(pairTrafficLight);
-                                        }
-                                        else
-                                        {
-                                            std::cerr << "Invalid pair position: " << pairPosition << " on roadID: " << pairRoadID << std::endl;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        std::cerr << "Invalid pair roadID: " << pairRoadID << std::endl;
-                                    }
-                                }
+                                group = trafficLightGroups[groupID];
                             }
                             else
                             {
-                                std::cerr << "pairsRoads and pairsPositions sizes do not match." << std::endl;
+                                group = std::make_shared<TrafficLightGroup>();
+                                trafficLightGroups.push_back(group);
                             }
                         }
                         else
                         {
-                            std::cerr << "Missing pairsRoads or pairsPositions in traffic light configuration." << std::endl;
+                            group = std::make_shared<TrafficLightGroup>();
+                            trafficLightGroups.push_back(group);
                         }
-                    }
-                    else
-                    {
-                        if (trafficLightConfig.contains("timeClosed"))
-                        {
-                            int timeClosed = trafficLightConfig["timeClosed"];
-                            trafficLight->setTimeClosed(timeClosed);
-                        }
+
+                        group->addTrafficLight(trafficLight);
                     }
 
                     road->sections[position]->trafficLight = trafficLight;
@@ -183,6 +155,11 @@ void Simulation::setup()
                 std::cerr << "Invalid roadID: " << roadID << std::endl;
             }
         }
+    }
+
+    for (auto& group : trafficLightGroups)
+    {
+        group->initialize();
     }
 
     printSimulationSettings();
@@ -227,23 +204,19 @@ void Simulation::run()
     int numberRoads = roads.size();
     if (undefinedDuration)
     {
-
     }
     else
     {
         printRoadStates();
         for (unsigned long long episode = 0; episode < episodes; episode++)
         {
-            for (auto& road : roads)
+            for (auto& group : trafficLightGroups)
             {
-                for (auto& trafficLight : road->trafficLights)
-                {
-                    trafficLight->update();
-                }
+                group->update();
             }
+
             for (int roadIndex = 0; roadIndex < numberRoads; roadIndex++)
             {
-                std::sort(roads[roadIndex]->carsPositions.begin(), roads[roadIndex]->carsPositions.end());
                 roads[roadIndex]->simulateStep();
             }
             printRoadStates();
