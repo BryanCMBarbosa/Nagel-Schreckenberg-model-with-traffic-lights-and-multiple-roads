@@ -82,7 +82,7 @@ void Simulation::setup()
 
                 if (!connectedRoads.empty())
                 {
-                    for (size_t i = 0; i < connectedRoads.size(); i++)
+                    for (int i = 0; i < connectedRoads.size(); i++)
                     {
                         connectedRoads[i].second->sections[connectedRoads[i].first]->connect(connectedRoads);
                     }
@@ -95,7 +95,34 @@ void Simulation::setup()
             }
         }
     }
+    if (config["simulation"].contains("trafficLightGroups"))
+    {
+        const auto& trafficLightGroupsConfig = config["simulation"]["trafficLightGroups"];
+        for (const auto& groupConfig : trafficLightGroupsConfig)
+        {
+            int groupID = groupConfig.value("groupID", -1);
+            int transitionTime = groupConfig.value("transitionTime", 0);
 
+            if (groupID >= 0)
+            {
+                if (groupID >= trafficLightGroups.size())
+                    trafficLightGroups.resize(groupID + 1);
+
+                std::shared_ptr<TrafficLightGroup> group;
+                if (!trafficLightGroups[groupID])
+                {
+                    group = std::make_shared<TrafficLightGroup>();
+                    trafficLightGroups[groupID] = group;
+                }
+                else
+                {
+                    group = trafficLightGroups[groupID];
+                }
+
+                group->setTransitionTime(transitionTime);
+            }
+        }
+    }
     if (config["simulation"].contains("trafficLights"))
     {
         const auto& trafficLightsConfig = config["simulation"]["trafficLights"];

@@ -1,16 +1,19 @@
 #include "TrafficLightGroup.h"
 
 TrafficLightGroup::TrafficLightGroup()
-    : currentIndex(0), inGreenPhase(true), groupTimer(0)
+    : currentIndex(0), inGreenPhase(true), inTransitionPhase(false), groupTimer(0), transitionTime(0)
 {
+}
+
+void TrafficLightGroup::setTransitionTime(int time)
+{
+    transitionTime = time;
 }
 
 void TrafficLightGroup::addTrafficLight(std::shared_ptr<TrafficLight> trafficLight)
 {
     trafficLights.push_back(trafficLight);
     trafficLight->setGroup(shared_from_this());
-    trafficLight->state = false;
-    trafficLight->timer = 0;
 }
 
 void TrafficLightGroup::initialize()
@@ -19,20 +22,28 @@ void TrafficLightGroup::initialize()
     {
         currentIndex = 0;
         inGreenPhase = true;
+        inTransitionPhase = false;
         groupTimer = 0;
-        for (size_t i = 0; i < trafficLights.size(); ++i)
+        calculateTotalCycleTime();
+
+        for (auto& tl : trafficLights)
         {
-            if (i == currentIndex)
-            {
-                trafficLights[i]->state = true;
-            }
-            else
-            {
-                trafficLights[i]->state = false;
-            }
-            trafficLights[i]->timer = 0;
+            tl->state = false;
+            tl->timer = 0;
         }
+
+        trafficLights[currentIndex]->state = true;
     }
+}
+
+void TrafficLightGroup::calculateTotalCycleTime()
+{
+    totalCycleTime = 0;
+    for (const auto& tl : trafficLights)
+    {
+        totalCycleTime += tl->timeOpen;
+    }
+    totalCycleTime += transitionTime * trafficLights.size();
 }
 
 void TrafficLightGroup::update()
@@ -40,31 +51,31 @@ void TrafficLightGroup::update()
     if (trafficLights.empty())
         return;
 
-    auto currentTrafficLight = trafficLights[currentIndex];
-    auto nextIndex = (currentIndex + 1) % trafficLights.size();
-    auto nextTrafficLight = trafficLights[nextIndex];
+    groupTimer++;
 
     if (inGreenPhase)
     {
-        groupTimer++;
+        auto currentTrafficLight = trafficLights[currentIndex];
 
         if (groupTimer >= currentTrafficLight->timeOpen)
         {
             currentTrafficLight->state = false;
             groupTimer = 0;
             inGreenPhase = false;
+            inTransitionPhase = true;
         }
     }
-    else
+    else if (inTransitionPhase)
     {
-        groupTimer++;
-
-        if (groupTimer >= nextTrafficLight->timeClosed)
+        if (groupTimer >= transitionTime)
         {
-            currentIndex = nextIndex;
-            trafficLights[currentIndex]->state = true;
             groupTimer = 0;
             inGreenPhase = true;
+            inTransitionPhase = false;
+
+            currentIndex = (currentIndex + 1) % trafficLights.size();
+            auto nextTrafficLight = trafficLights[currentIndex];
+            nextTrafficLight->state = true;
         }
     }
 }

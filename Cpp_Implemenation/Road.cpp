@@ -249,7 +249,6 @@ int Road::calculateDistanceToSharedSection(RoadSection& currentSection)
 int Road::calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, int currentPosition, int distanceSharedSection)
 {
     int maxSpeed = currentSection.currentCar->speed;
-    int distance = 0;
 
     for (int d = 1; d <= maxSpeed; ++d)
     {
@@ -259,13 +258,7 @@ int Road::calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, 
             return d - 1;
 
         if (sections[index]->trafficLight && !sections[index]->trafficLight->state)
-        {
-            if (index == (currentPosition + 1) % roadSize)
-                return d - 1;
-            else
-                continue;
-        }
-
+            return d;
 
         if (anyCarInSharedSection(*sections[index]))
             return d - 1;
@@ -284,7 +277,7 @@ int Road::calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, 
                 if (newRoad->sections[newRoadIndex]->trafficLight && !newRoad->sections[newRoadIndex]->trafficLight->state)
                 {
                     if (newRoadIndex == currentSection.currentCar->indexAndTargetRoad.first)
-                        return d - 1;
+                        return d;
                     else
                         continue;
                 }

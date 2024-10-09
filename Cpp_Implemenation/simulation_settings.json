@@ -35,23 +35,30 @@
         ]
       }
     ],
+   "trafficLightGroups":
+   [
+      {
+        "groupID": 0,
+        "transitionTime": 5
+      }
+    ],
     "trafficLights":
     [
       {
         "roadID": 0,
-        "position": 10,
+        "position": 5,
         "externalControl": false,
         "timeOpen": 10,
-        "timeClosed": 10,
+        "timeClosed": -1,
         "paired": true,
         "groupID": 0
       },
       {
         "roadID": 1,
-        "position": 10,
+        "position": 5,
         "externalControl": false,
         "timeOpen": 15,
-        "timeClosed": 5,
+        "timeClosed": -1,
         "paired": true,
         "groupID": 0
       }
