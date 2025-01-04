@@ -17,6 +17,7 @@ class Road : public std::enable_shared_from_this<Road>
 public:
     int roadID;
     int roadSize;
+    double generalDensity;
     std::vector<std::shared_ptr<RoadSection>> sections;
     std::vector<std::shared_ptr<Road>> connectedRoads;
     int maxSpeed;
@@ -33,6 +34,7 @@ public:
     void setupSections();
     void simulateStep();
     void moveCars();
+    void calculateGeneralDensity();
     void addCars(int numCars, int position = -1);
     int calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, int currentPosition, int distanceSharedSection);
     bool anyCarInSharedSection(RoadSection& section);

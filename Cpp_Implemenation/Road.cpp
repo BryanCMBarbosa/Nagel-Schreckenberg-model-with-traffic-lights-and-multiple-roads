@@ -17,7 +17,6 @@ void Road::setupSections()
 void Road::simulateStep()
 {
     std::sort(carsPositions.begin(), carsPositions.end(), std::greater<int>());
-
     std::vector<int> newCarsPositions;
 
     for (auto& i : carsPositions)
@@ -74,6 +73,20 @@ void Road::simulateStep()
     }
 
     moveCars();
+    calculateGeneralDensity();
+}
+
+void Road::calculateGeneralDensity()
+{
+    int carCounter = 0;
+    for (auto& i : carsPositions)
+    {
+        auto& car = sections[i]->currentCar;
+        if (car)
+            carCounter++;
+    }
+
+    generalDensity = (double) carCounter / (double) roadSize;  
 }
 
 void Road::addCars(int numCars, int position)

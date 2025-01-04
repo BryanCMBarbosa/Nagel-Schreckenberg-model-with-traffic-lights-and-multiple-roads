@@ -46,6 +46,7 @@ void Simulation::setup()
         auto road = std::make_shared<Road>(roadID, roadSize, maxSpeed, brakeProb, changeProb, numCars, rng);
         roads.emplace_back(road);
         road->setupSections();
+        road->calculateGeneralDensity();
         road->addCars(numCars);
     }
 
