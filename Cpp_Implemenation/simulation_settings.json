@@ -1,7 +1,8 @@
 {
   "simulation":
   {
-    "episodes": 80,
+    "episodes": 10000,
+    "flowQueueSize": 100,
     "roads":
     [
       {

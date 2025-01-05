@@ -28,6 +28,7 @@ private:
     std::vector<std::shared_ptr<TrafficLightGroup>> trafficLightGroups;
     RandomNumberGenerator rng;
     unsigned long long episodes;
+    int flowQueueSize;
     bool undefinedDuration;
 
 public:

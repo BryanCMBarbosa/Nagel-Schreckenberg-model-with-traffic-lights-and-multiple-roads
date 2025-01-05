@@ -26,6 +26,11 @@ void Simulation::setup()
     else
         undefinedDuration = true;
 
+    if (config["simulation"].contains("flowQueueSize"))
+        flowQueueSize = config["simulation"]["flowQueueSize"];
+    else
+        flowQueueSize = 10;
+
     const auto& roadsConfig = config["simulation"]["roads"];
 
     for (const auto& roadConfig : roadsConfig)
@@ -43,7 +48,7 @@ void Simulation::setup()
         double brakeProb = roadConfig.value("brakeProbability", 0.1);
         double changeProb = roadConfig.value("changingRoadProbability", 0.15);
 
-        auto road = std::make_shared<Road>(roadID, roadSize, maxSpeed, brakeProb, changeProb, numCars, rng);
+        auto road = std::make_shared<Road>(roadID, roadSize, maxSpeed, brakeProb, changeProb, numCars, rng, flowQueueSize);
         roads.emplace_back(road);
         road->setupSections();
         road->addCars(numCars);
