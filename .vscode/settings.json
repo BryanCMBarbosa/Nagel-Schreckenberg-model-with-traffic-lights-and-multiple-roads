@@ -77,6 +77,11 @@
         "numeric": "cpp",
         "random": "cpp",
         "ranges": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "*.tpp": "cpp",
+        "charconv": "cpp",
+        "execution": "cpp",
+        "print": "cpp",
+        "queue": "cpp"
     }
 }

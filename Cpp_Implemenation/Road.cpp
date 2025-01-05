@@ -1,7 +1,7 @@
 #include "Road.h"
 
-Road::Road(int id, int roadSize, int maxSpd, double brakeP, double changingP, int initialNumCars, RandomNumberGenerator& gen)
-    : roadID(id), roadSize(roadSize), maxSpeed(maxSpd), brakeProb(brakeP), changingRoadProb(changingP), initialNumCars(initialNumCars), rng(gen) 
+Road::Road(int id, int roadSize, int maxSpd, double brakeP, double changingP, int initialNumCars, RandomNumberGenerator& gen, int flowQueueSize = 100)
+    : roadID(id), roadSize(roadSize), isPeriodic(true), maxSpeed(maxSpd), brakeProb(brakeP), changingRoadProb(changingP), initialNumCars(initialNumCars), rng(gen), spaceAveragedFlow(flowQueueSize), cumulativeTimeSpaceAveragedFlow(0.0) 
 {
 }
 
@@ -72,22 +72,179 @@ void Road::simulateStep()
         }
     }
 
+    calculateSpaceAveragedFlow();
+    calculateCumulativeTimeSpaceAveragedFlow();
+    calculateAverageTimeHeadway();
     moveCars();
     calculateGeneralDensity();
+    calculateAverageDistanceHeadway();
 }
 
 void Road::calculateGeneralDensity()
 {
-    int carCounter = 0;
-    for (auto& i : carsPositions)
+    generalDensity = static_cast<double>(carsPositions.size()) / roadSize;  
+}
+
+void Road::calculateSpaceAveragedFlow()
+{
+    int totalFlow = 0;
+
+    for(auto& position : carsPositions)
     {
-        auto& car = sections[i]->currentCar;
-        if (car)
-            carCounter++;
+        auto& car = sections[position]->currentCar;
+        if(car && car->speed > 0)
+            totalFlow++;
     }
 
-    generalDensity = (double) carCounter / (double) roadSize;  
+    spaceAveragedFlow.push(static_cast<double>(totalFlow) / roadSize);
 }
+
+void Road::calculateCumulativeTimeSpaceAveragedFlow()
+{
+    double flowSum = 0.0;
+    flowSum = std::accumulate(spaceAveragedFlow.begin(), spaceAveragedFlow.end(), 0);
+    cumulativeTimeSpaceAveragedFlow = flowSum / spaceAveragedFlow.size();
+}
+
+int Road::calculateDistanceHeadwayBetweenTwoCars(int carIndex1, int carIndex2)
+{
+    std::sort(carsPositions.begin(), carsPositions.end(), std::greater<int>());
+
+    //Ensure indices are within bounds
+    if (carIndex1 < 0 || carIndex1 > carsPositions.size() ||
+        carIndex2 < 0 || carIndex2 > carsPositions.size())
+    {
+        throw std::out_of_range("Car indices are out of range.");
+    }
+
+    int position1 = carsPositions[carIndex1];
+    int position2 = carsPositions[carIndex2];
+
+    return (position2 - position1 + roadSize) % roadSize;
+}
+
+void Road::calculateAverageDistanceHeadway()
+{
+    std::sort(carsPositions.begin(), carsPositions.end(), std::greater<int>());
+
+    if (carsPositions.size() < 2)
+    {
+        averageDistanceHeadway = 0.0; //No meaningful headway if fewer than two cars
+    }
+
+    double totalHeadway = 0.0;
+
+    for (size_t i = 0; i < carsPositions.size() - 1; i++)
+    {
+        totalHeadway += calculateDistanceHeadwayBetweenTwoCars(i, i + 1);
+    }
+
+    averageDistanceHeadway = totalHeadway / (carsPositions.size() - 1);
+}
+
+void Road::calculateAverageTimeHeadway()
+{
+    if (spaceAveragedFlow.empty())
+    {
+        averageTimeHeadway = 0.0;
+        return;
+    }
+
+    double totalHeadway = 0.0;
+
+    for (double flow : spaceAveragedFlow)
+    {
+        if (flow > 0) //Avoid division by zero
+        {
+            totalHeadway += 1.0 / flow;
+        }
+        else
+        {
+            totalHeadway += std::numeric_limits<double>::infinity(); //Infinite headway for zero flow
+        }
+    }
+
+    averageTimeHeadway = totalHeadway / spaceAveragedFlow.size();
+}
+
+
+std::vector<std::pair<int, int>> Road::detectJams()
+{
+    if (carsPositions.size() < 3)
+    {
+        return;
+    }
+
+    std::sort(carsPositions.begin(), carsPositions.end());
+
+    std::vector<std::pair<int, int>> jams; //starting position, size of jam
+    int consecutiveStoppedCars = 1;
+    int firstCarInJam = carsPositions[0];
+
+    for (size_t i = 1; i < carsPositions.size(); i++)
+    {
+        int distance = (carsPositions[i] - carsPositions[i - 1]);
+
+        if (distance == 1)
+        {
+            auto& prevCar = sections[carsPositions[i - 1]]->currentCar;
+            auto& currCar = sections[carsPositions[i]]->currentCar;
+
+            if (prevCar && currCar && prevCar->speed == 0 && currCar->speed == 0)
+            {
+                consecutiveStoppedCars++;
+
+                if (consecutiveStoppedCars == 3)
+                {
+                    jams.push_back({firstCarInJam, consecutiveStoppedCars});
+                }
+                else if (consecutiveStoppedCars > 3)
+                {
+                    jams.back().second = consecutiveStoppedCars;
+                }
+            }
+            else
+            {
+                consecutiveStoppedCars = 1;
+                firstCarInJam = carsPositions[i];
+            }
+        }
+        else
+        {
+            consecutiveStoppedCars = 1;
+            firstCarInJam = carsPositions[i];
+        }
+    }
+
+    if (isPeriodic)
+    {
+        int circularDistance = (carsPositions[0] - carsPositions.back() + roadSize) % roadSize;
+        if (circularDistance == 1)
+        {
+            auto& lastCar = sections[carsPositions.back()]->currentCar;
+            auto& firstCar = sections[carsPositions[0]]->currentCar;
+
+            if (lastCar && firstCar && lastCar->speed == 0 && firstCar->speed == 0)
+            {
+                consecutiveStoppedCars++;
+                if (consecutiveStoppedCars >= 3)
+                {
+                    if (!jams.empty() && jams.back().first == firstCarInJam)
+                    {
+                        jams.back().second = consecutiveStoppedCars;
+                    }
+                    else
+                    {
+                        jams.push_back({firstCarInJam, consecutiveStoppedCars});
+                    }
+                }
+            }
+        }
+    }
+
+    return jams;
+}
+
 
 void Road::addCars(int numCars, int position)
 {
@@ -321,7 +478,6 @@ bool Road::anyCarInSharedSection(RoadSection& section)
     }
     return false;
 }
-
 
 Road::~Road()
 {
