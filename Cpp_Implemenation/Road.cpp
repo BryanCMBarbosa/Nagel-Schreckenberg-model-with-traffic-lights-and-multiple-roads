@@ -1,7 +1,7 @@
 #include "Road.h"
 
 Road::Road(int id, int roadSize, int maxSpd, double brakeP, double changingP, int initialNumCars, RandomNumberGenerator& gen, int flowQueueSize = 100)
-    : roadID(id), roadSize(roadSize), isPeriodic(true), maxSpeed(maxSpd), brakeProb(brakeP), changingRoadProb(changingP), initialNumCars(initialNumCars), rng(gen), spaceAveragedFlow(flowQueueSize), cumulativeTimeSpaceAveragedFlow(0.0) 
+    : roadID(id), roadSize(roadSize), isPeriodic(true), maxSpeed(maxSpd), brakeProb(brakeP), changingRoadProb(changingP), initialNumCars(initialNumCars), rng(gen), spaceAveragedFlow(flowQueueSize), averageSpeed(0.0), cumulativeTimeSpaceAveragedFlow(0.0) 
 {
 }
 
@@ -78,6 +78,7 @@ void Road::simulateStep()
     moveCars();
     calculateGeneralDensity();
     calculateAverageDistanceHeadway();
+    calculateAverageSpeed();
 }
 
 void Road::calculateGeneralDensity()
@@ -200,6 +201,31 @@ void Road::calculateAverageTimeHeadway()
     averageTimeHeadway = totalHeadway / spaceAveragedFlow.size();
 }
 
+void Road::calculateAverageSpeed()
+{
+    int speedSum = 0;
+    for(auto& position : carsPositions)
+    {
+        speedSum += sections[position]->currentCar->speed;
+    }
+    averageSpeed = static_cast<double>(speedSum) / carsPositions.size();
+}
+
+std::vector<int> Road::getRoadRepresentation() const
+{
+    std::vector<int> representation(roadSize, -1);
+
+    for (int position : carsPositions)
+    {
+        auto& car = sections[position]->currentCar;
+        if (car)
+        {
+            representation[position] = car->speed;
+        }
+    }
+
+    return representation;
+}
 
 std::vector<std::pair<int, int>> Road::detectJams()
 {

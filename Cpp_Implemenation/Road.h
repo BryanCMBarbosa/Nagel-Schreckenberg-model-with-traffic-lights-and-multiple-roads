@@ -24,6 +24,7 @@ public:
     double cumulativeTimeSpaceAveragedFlow;
     double averageDistanceHeadway;
     double averageTimeHeadway;
+    double averageSpeed;
     std::vector<std::shared_ptr<RoadSection>> sections;
     std::vector<std::shared_ptr<Road>> connectedRoads;
     int maxSpeed;
@@ -47,6 +48,8 @@ public:
     int calculateDistanceHeadwayBetweenTwoCars(int carIndex1, int carIndex2);
     void calculateAverageDistanceHeadway();
     void calculateAverageTimeHeadway();
+    void calculateAverageSpeed();
+    std::vector<int> getRoadRepresentation() const;
     std::vector<std::pair<int, int>> detectJams();
     void addCars(int numCars, int position = -1);
     int calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, int currentPosition, int distanceSharedSection);

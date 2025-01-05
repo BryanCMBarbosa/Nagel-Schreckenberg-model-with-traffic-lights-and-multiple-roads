@@ -235,8 +235,12 @@ void Simulation::run()
 {
     std::cout << "Running simulation...\n";
     int numberRoads = roads.size();
+
+    simulationResults["episodes"] = nlohmann::json::array();
+
     if (undefinedDuration)
     {
+        //Handle undefined duration if applicable
     }
     else
     {
@@ -252,11 +256,17 @@ void Simulation::run()
             {
                 roads[roadIndex]->simulateStep();
             }
+
+            collectMetrics(episode);
+
             printRoadStates();
             std::this_thread::sleep_for(std::chrono::milliseconds(150));
         }
+
+        serializeResults("simulation_results.json");
     }
 }
+
 
 void Simulation::clearScreen() const
 {
@@ -303,3 +313,41 @@ void Simulation::printRoadStates() const
     }
 }
 
+void Simulation::collectMetrics(int episode)
+{
+    nlohmann::json episodeData;
+    episodeData["episode"] = episode;
+
+    for (const auto& road : roads)
+    {
+        nlohmann::json roadData;
+        roadData["roadID"] = road->roadID;
+        roadData["generalDensity"] = road->generalDensity;
+        roadData["cumulativeTimeSpaceAveragedFlow"] = road->cumulativeTimeSpaceAveragedFlow;
+        roadData["averageDistanceHeadway"] = road->averageDistanceHeadway;
+        roadData["averageTimeHeadway"] = road->averageTimeHeadway;
+        roadData["averageSpeed"] = road->averageSpeed;
+
+        roadData["roadRepresentation"] = road->getRoadRepresentation();
+
+        episodeData["roads"].push_back(roadData);
+    }
+
+    simulationResults["episodes"].push_back(episodeData);
+}
+
+
+void Simulation::serializeResults(const std::string& filename) const
+{
+    std::ofstream file(filename);
+    if (file.is_open())
+    {
+        file << std::setw(4) << simulationResults << std::endl;
+        file.close();
+        std::cout << "Results serialized to " << filename << std::endl;
+    }
+    else
+    {
+        std::cerr << "Unable to open file for serialization: " << filename << std::endl;
+    }
+}

@@ -30,6 +30,7 @@ private:
     unsigned long long episodes;
     int flowQueueSize;
     bool undefinedDuration;
+    nlohmann::json simulationResults;
 
 public:
     Simulation(const std::string& configFilePath);
@@ -38,7 +39,9 @@ public:
     void printSimulationSettings() const;
     void run();
     void clearScreen() const;
-    void printRoadStates() const; 
+    void printRoadStates() const;
+    void collectMetrics(int episode);
+    void serializeResults(const std::string& filename) const; 
 };
 
 #endif
