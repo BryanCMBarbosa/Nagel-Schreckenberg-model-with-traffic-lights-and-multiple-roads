@@ -41,6 +41,7 @@ public:
     void simulateStep();
     void moveCars();
     void calculateGeneralDensity();
+    double calculateRegionalDensity(int leftBoundary, int rightBoundary);
     void calculateSpaceAveragedFlow();
     void calculateCumulativeTimeSpaceAveragedFlow();
     int calculateDistanceHeadwayBetweenTwoCars(int carIndex1, int carIndex2);

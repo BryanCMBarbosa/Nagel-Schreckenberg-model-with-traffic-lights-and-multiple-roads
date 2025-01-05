@@ -85,6 +85,39 @@ void Road::calculateGeneralDensity()
     generalDensity = static_cast<double>(carsPositions.size()) / roadSize;  
 }
 
+double Road::calculateRegionalDensity(int leftBoundary, int rightBoundary)
+{
+    if (leftBoundary > rightBoundary || leftBoundary < 0 || rightBoundary >= roadSize)
+    {
+        throw std::invalid_argument("Invalid boundary values.");
+    }
+
+    int carCount = 0;
+    int regionLength = rightBoundary - leftBoundary + 1;
+
+    for (int position : carsPositions)
+    {
+        if (isPeriodic)
+        {
+            int wrappedPosition = (position + roadSize) % roadSize;
+            if ((wrappedPosition >= leftBoundary && wrappedPosition <= rightBoundary) ||
+                (leftBoundary > rightBoundary && (wrappedPosition >= leftBoundary || wrappedPosition <= rightBoundary)))
+            {
+                carCount++;
+            }
+        }
+        else
+        {
+            if (position >= leftBoundary && position <= rightBoundary)
+            {
+                carCount++;
+            }
+        }
+    }
+
+    return static_cast<double>(carCount) / regionLength;
+}
+
 void Road::calculateSpaceAveragedFlow()
 {
     int totalFlow = 0;
