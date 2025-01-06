@@ -1,6 +1,6 @@
 #include "Simulation.h"
 
-Simulation::Simulation(const std::string& configFilePath)
+Simulation::Simulation(const std::string& configFilePath) : undefinedDuration(false)
 {
     std::ifstream file(configFilePath);
     if (file.is_open())
@@ -221,9 +221,12 @@ void Simulation::printSimulationSettings() const
     {
         std::cout << std::setw(20) << "Road ID" << road->roadID << "\n";
         std::cout << std::setw(20) << "Road Size" << road->sections.size() << "\n";
+        road->isPeriodic ? std::cout << std::setw(20) << "Periodic boundary" <<  "\n" : std::cout << std::setw(20) << "Open boundary" <<  "\n";
         std::cout << std::setw(20) << "Max Speed" << road->maxSpeed << "\n";
         std::cout << std::setw(20) << "Brake Probability" << road->brakeProb << "\n";
         std::cout << std::setw(20) << "Changing Road Prob" << road->changingRoadProb << "\n";
+        std::cout << std::setw(20) << "Alpha" << road->alpha << "\n";
+        std::cout << std::setw(20) << "Beta" << road->beta << "\n";
         std::cout << std::setw(20) << "Connected Roads";
         for (auto connectedRoad : road->connectedRoads)
         {

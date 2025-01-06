@@ -1,13 +1,13 @@
 {
   "simulation":
   {
-    "episodes": 10000,
+    "episodes": 200,
     "flowQueueSize": 100,
     "roads":
     [
       {
         "roadID": 0,
-        "roadSize": 13,
+        "roadSize": 15,
         "isPeriodic": true,
         "maxSpeed": 3,
         "brakeProbability": 0.2,

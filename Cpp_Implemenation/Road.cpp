@@ -184,9 +184,7 @@ int Road::calculateDistanceHeadwayBetweenTwoCars(int carIndex1, int carIndex2)
     //Ensure indices are within bounds
     if (carIndex1 < 0 || carIndex1 > carsPositions.size() ||
         carIndex2 < 0 || carIndex2 > carsPositions.size())
-    {
         throw std::out_of_range("Car indices are out of range.");
-    }
 
     int position1 = carsPositions[carIndex1];
     int position2 = carsPositions[carIndex2];
@@ -200,17 +198,19 @@ void Road::calculateAverageDistanceHeadway()
 
     if (carsPositions.size() < 2)
     {
-        averageDistanceHeadway = 0.0; //No meaningful headway if fewer than two cars
+        averageDistanceHeadway = std::numeric_limits<double>::infinity(); //No meaningful headway if fewer than two cars
     }
-
-    double totalHeadway = 0.0;
-
-    for (size_t i = 0; i < carsPositions.size() - 1; i++)
+    else
     {
-        totalHeadway += calculateDistanceHeadwayBetweenTwoCars(i, i + 1);
-    }
+        double totalHeadway = 0.0;
 
-    averageDistanceHeadway = totalHeadway / (carsPositions.size() - 1);
+        for (size_t i = 0; i < carsPositions.size() - 1; i++)
+        {
+            totalHeadway += calculateDistanceHeadwayBetweenTwoCars(i, i + 1);
+        }
+
+        averageDistanceHeadway = totalHeadway / (carsPositions.size() - 1);
+    }
 }
 
 void Road::calculateAverageTimeHeadway()
