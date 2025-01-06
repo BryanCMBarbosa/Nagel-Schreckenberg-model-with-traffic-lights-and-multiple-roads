@@ -1,7 +1,7 @@
 #include "Road.h"
 
-Road::Road(int id, int roadSize, int maxSpd, double brakeP, double changingP, int initialNumCars, RandomNumberGenerator& gen, int flowQueueSize = 100)
-    : roadID(id), roadSize(roadSize), isPeriodic(true), maxSpeed(maxSpd), brakeProb(brakeP), changingRoadProb(changingP), initialNumCars(initialNumCars), rng(gen), spaceAveragedFlow(flowQueueSize), averageSpeed(0.0), cumulativeTimeSpaceAveragedFlow(0.0) 
+Road::Road(int id, int roadSize, bool isPeriodic, double alpha, double beta, int maxSpd, double brakeP, double changingP, int initialNumCars, RandomNumberGenerator& gen, int flowQueueSize = 100)
+    : roadID(id), roadSize(roadSize), isPeriodic(isPeriodic), alpha(alpha), beta(beta), maxSpeed(maxSpd), brakeProb(brakeP), changingRoadProb(changingP), initialNumCars(initialNumCars), rng(gen), spaceAveragedFlow(flowQueueSize), averageSpeed(0.0), cumulativeTimeSpaceAveragedFlow(0.0) 
 {
 }
 
@@ -16,6 +16,16 @@ void Road::setupSections()
 
 void Road::simulateStep()
 {
+    if (!isPeriodic && sections[0]->connectedSections.empty() && rng.getRandomDouble() < alpha)
+    {
+        if (!sections[0]->currentCar)
+        {
+            auto newCar = std::make_shared<Car>(0, roadID);
+            sections[0]->currentCar = newCar;
+            carsPositions.push_back(0);
+        }
+    }
+
     std::sort(carsPositions.begin(), carsPositions.end(), std::greater<int>());
     std::vector<int> newCarsPositions;
 
@@ -69,13 +79,40 @@ void Road::simulateStep()
             {
                 car->willSurpassSharedSection = false;
             }
+
+            if (!isPeriodic && i + car->speed >= roadSize)
+            {
+                car->speed = roadSize - 1 - i; //Adjust speed to prevent out-of-bound movement
+            }
         }
     }
 
+    //Metrics based on current state (before moving cars)
     calculateSpaceAveragedFlow();
     calculateCumulativeTimeSpaceAveragedFlow();
     calculateAverageTimeHeadway();
+
+    //Move cars based on their current speeds
     moveCars();
+
+    //For open boundary, verify if the car on the last section is going to be removed
+    int lastSite = roadSize - 1;
+    if (!isPeriodic && sections[lastSite]->connectedSections.empty())
+    {
+        auto& car = sections[lastSite]->currentCar;
+
+        if (car)
+        {
+            bool carLeaves = rng.getRandomDouble() < beta;
+            if (carLeaves)
+            {
+                sections[lastSite]->currentCar = nullptr;
+                carsPositions.erase(std::remove(carsPositions.begin(), carsPositions.end(), lastSite), carsPositions.end());
+            }
+        }
+    }
+
+    //Metrics based on updated state (after moving cars or removing from the road)
     calculateGeneralDensity();
     calculateAverageDistanceHeadway();
     calculateAverageSpeed();
@@ -229,37 +266,41 @@ std::vector<int> Road::getRoadRepresentation() const
 
 std::vector<std::pair<int, int>> Road::detectJams()
 {
-    if (carsPositions.size() < 3)
+    std::vector<std::pair<int, int>> jams;
+    if (carsPositions.size() >= 3)
     {
-        return;
-    }
+        std::sort(carsPositions.begin(), carsPositions.end());
 
-    std::sort(carsPositions.begin(), carsPositions.end());
+        std::vector<std::pair<int, int>> jams; //starting position, size of jam
+        int consecutiveStoppedCars = 1;
+        int firstCarInJam = carsPositions[0];
 
-    std::vector<std::pair<int, int>> jams; //starting position, size of jam
-    int consecutiveStoppedCars = 1;
-    int firstCarInJam = carsPositions[0];
-
-    for (size_t i = 1; i < carsPositions.size(); i++)
-    {
-        int distance = (carsPositions[i] - carsPositions[i - 1]);
-
-        if (distance == 1)
+        for (size_t i = 1; i < carsPositions.size(); i++)
         {
-            auto& prevCar = sections[carsPositions[i - 1]]->currentCar;
-            auto& currCar = sections[carsPositions[i]]->currentCar;
+            int distance = (carsPositions[i] - carsPositions[i - 1]);
 
-            if (prevCar && currCar && prevCar->speed == 0 && currCar->speed == 0)
+            if (distance == 1)
             {
-                consecutiveStoppedCars++;
+                auto& prevCar = sections[carsPositions[i - 1]]->currentCar;
+                auto& currCar = sections[carsPositions[i]]->currentCar;
 
-                if (consecutiveStoppedCars == 3)
+                if (prevCar && currCar && prevCar->speed == 0 && currCar->speed == 0)
                 {
-                    jams.push_back({firstCarInJam, consecutiveStoppedCars});
+                    consecutiveStoppedCars++;
+
+                    if (consecutiveStoppedCars == 3)
+                    {
+                        jams.push_back({firstCarInJam, consecutiveStoppedCars});
+                    }
+                    else if (consecutiveStoppedCars > 3)
+                    {
+                        jams.back().second = consecutiveStoppedCars;
+                    }
                 }
-                else if (consecutiveStoppedCars > 3)
+                else
                 {
-                    jams.back().second = consecutiveStoppedCars;
+                    consecutiveStoppedCars = 1;
+                    firstCarInJam = carsPositions[i];
                 }
             }
             else
@@ -268,39 +309,33 @@ std::vector<std::pair<int, int>> Road::detectJams()
                 firstCarInJam = carsPositions[i];
             }
         }
-        else
-        {
-            consecutiveStoppedCars = 1;
-            firstCarInJam = carsPositions[i];
-        }
-    }
 
-    if (isPeriodic)
-    {
-        int circularDistance = (carsPositions[0] - carsPositions.back() + roadSize) % roadSize;
-        if (circularDistance == 1)
+        if (isPeriodic)
         {
-            auto& lastCar = sections[carsPositions.back()]->currentCar;
-            auto& firstCar = sections[carsPositions[0]]->currentCar;
-
-            if (lastCar && firstCar && lastCar->speed == 0 && firstCar->speed == 0)
+            int circularDistance = (carsPositions[0] - carsPositions.back() + roadSize) % roadSize;
+            if (circularDistance == 1)
             {
-                consecutiveStoppedCars++;
-                if (consecutiveStoppedCars >= 3)
+                auto& lastCar = sections[carsPositions.back()]->currentCar;
+                auto& firstCar = sections[carsPositions[0]]->currentCar;
+
+                if (lastCar && firstCar && lastCar->speed == 0 && firstCar->speed == 0)
                 {
-                    if (!jams.empty() && jams.back().first == firstCarInJam)
+                    consecutiveStoppedCars++;
+                    if (consecutiveStoppedCars >= 3)
                     {
-                        jams.back().second = consecutiveStoppedCars;
-                    }
-                    else
-                    {
-                        jams.push_back({firstCarInJam, consecutiveStoppedCars});
+                        if (!jams.empty() && jams.back().first == firstCarInJam)
+                        {
+                            jams.back().second = consecutiveStoppedCars;
+                        }
+                        else
+                        {
+                            jams.push_back({firstCarInJam, consecutiveStoppedCars});
+                        }
                     }
                 }
             }
         }
     }
-
     return jams;
 }
 
@@ -322,6 +357,8 @@ void Road::addCars(int numCars, int position)
             sections[position]->currentCar = std::make_shared<Car>(position, roadID);
             carsPositions.push_back(position);
         }
+        calculateGeneralDensity();
+        calculateAverageDistanceHeadway();
     }
     else
     {

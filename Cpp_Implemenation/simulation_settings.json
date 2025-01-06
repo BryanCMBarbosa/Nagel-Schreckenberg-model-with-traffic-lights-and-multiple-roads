@@ -8,17 +8,23 @@
       {
         "roadID": 0,
         "roadSize": 13,
+        "isPeriodic": true,
         "maxSpeed": 3,
         "brakeProbability": 0.2,
         "changingRoadProbability": 0.9,
+        "alpha": 0.0,
+        "beta": 0.0,
         "numCars": 6
       },
       {
         "roadID": 1,
         "roadSize": 13,
+        "isPeriodic": true,
         "maxSpeed": 3,
         "brakeProbability": 0.2,
         "changingRoadProbability": 0.9,
+        "alpha": 0.0,
+        "beta": 0.0,
         "numCars": 3
       }
     ],

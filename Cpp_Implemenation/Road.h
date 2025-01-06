@@ -27,6 +27,8 @@ public:
     double averageSpeed;
     std::vector<std::shared_ptr<RoadSection>> sections;
     std::vector<std::shared_ptr<Road>> connectedRoads;
+    double alpha;
+    double beta;
     int maxSpeed;
     double brakeProb;
     double changingRoadProb;
@@ -35,7 +37,7 @@ public:
     std::vector<std::shared_ptr<TrafficLight>> trafficLights;
     RandomNumberGenerator& rng;
 
-    Road(int id, int roadSize, int maxSpd, double brakeP, double changingP, int initialNumCars, RandomNumberGenerator& gen, int flowQueueSize);
+    Road(int id, int roadSize, bool isPeriodic, double alpha, double beta, int maxSpd, double brakeP, double changingP, int initialNumCars, RandomNumberGenerator& gen, int flowQueueSize);
     Road(const Road&) = delete;
     Road& operator=(const Road&) = delete;
     void setupSections();

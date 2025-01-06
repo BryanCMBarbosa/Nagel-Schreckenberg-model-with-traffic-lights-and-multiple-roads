@@ -47,12 +47,14 @@ void Simulation::setup()
         int maxSpeed = roadConfig.value("maxSpeed", 5);
         double brakeProb = roadConfig.value("brakeProbability", 0.1);
         double changeProb = roadConfig.value("changingRoadProbability", 0.15);
+        bool isPeriodic = roadConfig.value("isPeriodic", true);
+        double alpha = roadConfig.value("alpha", 0.0);
+        double beta = roadConfig.value("beta", 0.0);
 
-        auto road = std::make_shared<Road>(roadID, roadSize, maxSpeed, brakeProb, changeProb, numCars, rng, flowQueueSize);
+        auto road = std::make_shared<Road>(roadID, roadSize, isPeriodic, alpha, beta, maxSpeed, brakeProb, changeProb, numCars, rng, flowQueueSize);
         roads.emplace_back(road);
         road->setupSections();
         road->addCars(numCars);
-        road->calculateGeneralDensity();
     }
 
     if (config["simulation"].contains("sharedSections"))
