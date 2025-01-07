@@ -11,7 +11,11 @@
         "isPeriodic": true,
         "maxSpeed": 3,
         "brakeProbability": 0.2,
-        "changingRoadProbability": 0.9,
+        "sharedSections":
+        [
+          [1, 11, 11, 0.9, 0.8],
+          [3, 4, 5, 0.0, 1.0]
+        ],
         "alpha": 0.0,
         "beta": 0.0,
         "numCars": 6
@@ -22,24 +26,39 @@
         "isPeriodic": true,
         "maxSpeed": 3,
         "brakeProbability": 0.2,
-        "changingRoadProbability": 0.9,
+        "sharedSections":
+        [
+          [2, 7, 0, 0.6, 0.0]
+        ],
         "alpha": 0.0,
         "beta": 0.0,
         "numCars": 3
-      }
-    ],
-    "sharedSections":
-    [
+      },
       {
-        "roadID": 0,
-        "index": 11,
-        "sharedWith":
+        "roadID": 2,
+        "roadSize": 12,
+        "isPeriodic": false,
+        "maxSpeed": 1,
+        "brakeProbability": 0.2,
+        "sharedSections":
         [
-          {
-            "roadID": 1,
-            "index": 11
-          }
-        ]
+        ],
+        "alpha": 0.0,
+        "beta": 0.8,
+        "numCars": 3
+      },
+      {
+        "roadID": 3,
+        "roadSize": 6,
+        "isPeriodic": false,
+        "maxSpeed": 3,
+        "brakeProbability": 0.2,
+        "sharedSections":
+        [
+        ],
+        "alpha": 0.25,
+        "beta": 0.0,
+        "numCars": 3
       }
     ],
    "trafficLightGroups":

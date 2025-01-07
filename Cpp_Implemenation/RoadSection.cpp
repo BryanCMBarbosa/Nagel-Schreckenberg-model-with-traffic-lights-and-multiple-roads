@@ -17,42 +17,10 @@ void RoadSection::addCar()
         std::cerr << "Error: Road has expired in RoadSection." << std::endl;
 }
 
-void RoadSection::connect(std::vector<std::pair<int, std::shared_ptr<Road>>> connections)
+void RoadSection::connect(std::weak_ptr<RoadSection> connectedSection)
 {
-    auto roadPtr = road.lock();
-    if (!roadPtr)
-    {
-        std::cerr << "Error: RoadSection's road has expired." << std::endl;
-        return;
-    }
-
-    int numberConnections = connections.size();
-    for (int i = 0; i < numberConnections; i++)
-    {
-        if (connections[i].second->roadID == roadPtr->roadID)
-            continue;
-
-        bool alreadyFound = false;
-
-        for (auto& existingWeakSection : connectedSections)
-        {
-            auto existingSection = existingWeakSection.lock();
-            if (existingSection)
-            {
-                auto existingRoadPtr = existingSection->road.lock();
-                if (existingRoadPtr && connections[i].second->roadID == existingRoadPtr->roadID)
-                {
-                    alreadyFound = true;
-                    break;
-                }
-            }
-        }
-        if (!alreadyFound)
-        {
-            connectedSections.push_back(connections[i].second->sections[connections[i].first]);
-            isSharedSection = true;
-        }
-    }
+    connectedSections.push_back(connectedSection);
+    isSharedSection = true;
 }
 
 void RoadSection::disconnect(RoadSection* otherSection)

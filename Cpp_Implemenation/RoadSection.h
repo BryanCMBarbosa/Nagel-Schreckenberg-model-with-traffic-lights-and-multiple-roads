@@ -27,7 +27,7 @@ public:
 
     void addCar();
 
-    void connect(std::vector<std::pair<int, std::shared_ptr<Road>>> connections);
+    void connect(std::weak_ptr<RoadSection> connectedSection);
     void disconnect(RoadSection* otherSection);
 
     ~RoadSection();

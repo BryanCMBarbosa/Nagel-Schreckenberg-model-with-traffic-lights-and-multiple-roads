@@ -9,6 +9,7 @@
 #include "TrafficLight.h"
 #include "RandomNumberGenerator.h"
 #include "LimitedQueue.h"
+#include "Dictionary.h"
 
 class RoadSection;
 class TrafficLight;
@@ -31,13 +32,13 @@ public:
     double beta;
     int maxSpeed;
     double brakeProb;
-    double changingRoadProb;
+    Dictionary<int, double> changingRoadProbs;
     int initialNumCars;
     std::vector<int> carsPositions;
     std::vector<std::shared_ptr<TrafficLight>> trafficLights;
     RandomNumberGenerator& rng;
 
-    Road(int id, int roadSize, bool isPeriodic, double alpha, double beta, int maxSpd, double brakeP, double changingP, int initialNumCars, RandomNumberGenerator& gen, int flowQueueSize);
+    Road(int id, int roadSize, bool isPeriodic, double alpha, double beta, int maxSpd, double brakeP, int initialNumCars, RandomNumberGenerator& gen, int flowQueueSize);
     Road(const Road&) = delete;
     Road& operator=(const Road&) = delete;
     void setupSections();

@@ -1,7 +1,7 @@
 #include "Road.h"
 
-Road::Road(int id, int roadSize, bool isPeriodic, double alpha, double beta, int maxSpd, double brakeP, double changingP, int initialNumCars, RandomNumberGenerator& gen, int flowQueueSize = 100)
-    : roadID(id), roadSize(roadSize), isPeriodic(isPeriodic), alpha(alpha), beta(beta), maxSpeed(maxSpd), brakeProb(brakeP), changingRoadProb(changingP), initialNumCars(initialNumCars), rng(gen), spaceAveragedFlow(flowQueueSize), averageSpeed(0.0), cumulativeTimeSpaceAveragedFlow(0.0) 
+Road::Road(int id, int roadSize, bool isPeriodic, double alpha, double beta, int maxSpd, double brakeP, int initialNumCars, RandomNumberGenerator& gen, int flowQueueSize = 100)
+    : roadID(id), roadSize(roadSize), isPeriodic(isPeriodic), alpha(alpha), beta(beta), maxSpeed(maxSpd), brakeProb(brakeP), initialNumCars(initialNumCars), rng(gen), spaceAveragedFlow(flowQueueSize), averageSpeed(0.0), cumulativeTimeSpaceAveragedFlow(0.0) 
 {
 }
 
@@ -45,7 +45,7 @@ void Road::simulateStep()
             int distanceSharedSection = calculateDistanceToSharedSection(*sections[i]);
             if (!car->roadChangeDecisionMade && car->speed >= distanceSharedSection)
             {
-                if (rng.getRandomDouble() < changingRoadProb)
+                if (rng.getRandomDouble() < changingRoadProbs.get((i + distanceSharedSection) % roadSize))
                 {
                     car->indexAndTargetRoad = decideTargetRoad(*sections[(i + distanceSharedSection) % roadSize]);
                     car->willChangeRoad = (car->indexAndTargetRoad.first != -1);
@@ -80,7 +80,7 @@ void Road::simulateStep()
                 car->willSurpassSharedSection = false;
             }
 
-            if (!isPeriodic && i + car->speed >= roadSize)
+            if (!isPeriodic && i + car->speed >= roadSize && !sections[roadSize-1]->isSharedSection)
             {
                 car->speed = roadSize - 1 - i; //Adjust speed to prevent out-of-bound movement
             }
@@ -97,10 +97,9 @@ void Road::simulateStep()
 
     //For open boundary, verify if the car on the last section is going to be removed
     int lastSite = roadSize - 1;
-    if (!isPeriodic && sections[lastSite]->connectedSections.empty())
+    if (!isPeriodic)
     {
         auto& car = sections[lastSite]->currentCar;
-
         if (car)
         {
             bool carLeaves = rng.getRandomDouble() < beta;

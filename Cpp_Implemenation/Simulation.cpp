@@ -46,63 +46,49 @@ void Simulation::setup()
 
         int maxSpeed = roadConfig.value("maxSpeed", 5);
         double brakeProb = roadConfig.value("brakeProbability", 0.1);
-        double changeProb = roadConfig.value("changingRoadProbability", 0.15);
         bool isPeriodic = roadConfig.value("isPeriodic", true);
         double alpha = roadConfig.value("alpha", 0.0);
         double beta = roadConfig.value("beta", 0.0);
 
-        auto road = std::make_shared<Road>(roadID, roadSize, isPeriodic, alpha, beta, maxSpeed, brakeProb, changeProb, numCars, rng, flowQueueSize);
+        auto road = std::make_shared<Road>(roadID, roadSize, isPeriodic, alpha, beta, maxSpeed, brakeProb, numCars, rng, flowQueueSize);
         roads.emplace_back(road);
         road->setupSections();
         road->addCars(numCars);
     }
-
-    if (config["simulation"].contains("sharedSections"))
+    if (config["simulation"].contains("roads"))
     {
-        const auto& sharedSections = config["simulation"]["sharedSections"];
-        for (const auto& sharedSection : sharedSections)
+        const auto& roadsConfig = config["simulation"]["roads"];
+        for (const auto& roadConfig : roadsConfig)
         {
-            int roadID = sharedSection["roadID"];
-            int index = sharedSection["index"];
-            std::vector<std::pair<int, std::shared_ptr<Road>>> connectedRoads;
-
-            if (roadID >= 0 && roadID < roads.size() && index >= 0 && index < roads[roadID]->sections.size())
+            int roadID = roadConfig["roadID"];
+            const auto& sharedSections = roadConfig["sharedSections"];
+            for (const auto& sharedSection : sharedSections)
             {
-                connectedRoads.push_back(std::make_pair(index, roads[roadID]));
-                const auto& otherConnectedRoads = sharedSection["sharedWith"];
-
-                for (const auto& otherConnectedRoad : otherConnectedRoads)
+                if (sharedSection.size() == 5)
                 {
-                    int otherConnRoadID = otherConnectedRoad["roadID"];
-                    int otherConnRoadSection = otherConnectedRoad["index"];
+                    int otherRoadID = sharedSection[0];
+                    int currentSite = sharedSection[1];
+                    int otherSite = sharedSection[2];
+                    double currentToOtherProb = sharedSection[3];
+                    double otherToCurrentProb = sharedSection[4];
 
-                    if (otherConnRoadID >= 0 && otherConnRoadID < roads.size() &&
-                        otherConnRoadSection >= 0 && otherConnRoadSection < roads[otherConnRoadID]->sections.size())
+                    if ((roadID >= 0 && roadID < roads.size() && currentSite >= 0 && currentSite < roads[roadID]->roadSize) &&
+                        (otherRoadID >= 0 && otherRoadID < roads.size() && otherSite >= 0 && otherSite < roads[otherRoadID]->sections.size()))
                     {
-                        connectedRoads.push_back(std::make_pair(otherConnRoadSection, roads[otherConnRoadID]));
+                        roads[roadID]->changingRoadProbs.add(currentSite, currentToOtherProb);
+                        roads[otherRoadID]->changingRoadProbs.add(otherSite, otherToCurrentProb);
+                        roads[roadID]->sections[currentSite]->connect(roads[otherRoadID]->sections[otherSite]);
+                        roads[otherRoadID]->sections[otherSite]->connect(roads[roadID]->sections[currentSite]);
                     }
                     else
-                    {
-                        std::cerr << "Invalid other roadID or section index: roadID="
-                                  << otherConnRoadID << ", section=" << otherConnRoadSection << std::endl;
-                    }
+                        std::cerr << "Invalid roadID or section index in sharedSection." << std::endl;
                 }
-
-                if (!connectedRoads.empty())
-                {
-                    for (int i = 0; i < connectedRoads.size(); i++)
-                    {
-                        connectedRoads[i].second->sections[connectedRoads[i].first]->connect(connectedRoads);
-                    }
-                }
-            }
-            else
-            {
-                std::cerr << "Invalid roadID or section index in sharedSection: roadID="
-                          << roadID << ", section=" << index << std::endl;
+                else
+                    std::cerr << "Not enough parameters on shared section specifications" << std::endl;
             }
         }
     }
+    
     if (config["simulation"].contains("trafficLightGroups"))
     {
         const auto& trafficLightGroupsConfig = config["simulation"]["trafficLightGroups"];
@@ -224,16 +210,12 @@ void Simulation::printSimulationSettings() const
         road->isPeriodic ? std::cout << std::setw(20) << "Periodic boundary" <<  "\n" : std::cout << std::setw(20) << "Open boundary" <<  "\n";
         std::cout << std::setw(20) << "Max Speed" << road->maxSpeed << "\n";
         std::cout << std::setw(20) << "Brake Probability" << road->brakeProb << "\n";
-        std::cout << std::setw(20) << "Changing Road Prob" << road->changingRoadProb << "\n";
+        //std::cout << std::setw(20) << "Changing Road Prob" << road->changingRoadProb << "\n";
         std::cout << std::setw(20) << "Alpha" << road->alpha << "\n";
         std::cout << std::setw(20) << "Beta" << road->beta << "\n";
-        std::cout << std::setw(20) << "Connected Roads";
-        for (auto connectedRoad : road->connectedRoads)
-        {
-            std::cout << connectedRoad->roadID << " ";
-        }
-        std::cout << "\n";
     }
+    std::cout << "Press any key to continue...";
+    std::cin.get();
 }
 
 void Simulation::run()
