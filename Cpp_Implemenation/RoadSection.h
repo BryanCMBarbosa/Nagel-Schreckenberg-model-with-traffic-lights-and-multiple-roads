@@ -1,7 +1,6 @@
 #ifndef ROADSECTION_H
 #define ROADSECTION_H
 
-
 #include "Car.h"
 #include "TrafficLight.h"
 #include <vector>

@@ -18,7 +18,8 @@ public:
     char side;
     int distanceToSharedSection;
     int sharedSectionIndex;
-    int originalRoadID; 
+    int originalRoadID;
+    int residenceTime; 
     std::pair<int, std::weak_ptr<Road>> indexAndTargetRoad;
 
     Car(int pos, int roadID);

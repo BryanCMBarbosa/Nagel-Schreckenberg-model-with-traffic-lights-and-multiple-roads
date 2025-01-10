@@ -16,6 +16,12 @@ double RandomNumberGenerator::getRandomDouble()
     return distrib(generator);
 }
 
+double RandomNumberGenerator::getRandomGaussian(double mean, double stddev)
+{
+    std::normal_distribution<double> distrib(mean, stddev);
+    return distrib(generator);
+}
+
 std::mt19937& RandomNumberGenerator::getGenerator()
 {
     return generator;

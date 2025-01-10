@@ -35,6 +35,9 @@ void Road::simulateStep()
 
         if (car)
         {
+            //Increasing residence time for one time step more
+            car->residenceTime++;
+
             //Acceleration
             if (car->speed < maxSpeed)
             {
@@ -105,6 +108,7 @@ void Road::simulateStep()
             bool carLeaves = rng.getRandomDouble() < beta;
             if (carLeaves)
             {
+                residenceTimes.push_back(car->residenceTime);
                 sections[lastSite]->currentCar = nullptr;
                 carsPositions.erase(std::remove(carsPositions.begin(), carsPositions.end(), lastSite), carsPositions.end());
             }

@@ -35,6 +35,7 @@ public:
     Dictionary<int, double> changingRoadProbs;
     int initialNumCars;
     std::vector<int> carsPositions;
+    std::vector<int> residenceTimes;
     std::vector<std::shared_ptr<TrafficLight>> trafficLights;
     RandomNumberGenerator& rng;
 

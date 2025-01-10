@@ -6,6 +6,7 @@
 #include "RandomNumberGenerator.h"
 #include "Road.h"
 #include "TrafficLightGroup.h"
+#include "TrafficVolumeGenerator.h"
 #include <vector>
 #include <set>
 #include <unordered_map>
@@ -31,6 +32,8 @@ private:
     int flowQueueSize;
     bool undefinedDuration;
     nlohmann::json simulationResults;
+    std::vector<int> roadsWithAlpha;
+    std::vector<int> roadsWithBeta;
 
 public:
     Simulation(const std::string& configFilePath);

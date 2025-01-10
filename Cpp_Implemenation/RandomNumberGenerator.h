@@ -10,6 +10,7 @@ class RandomNumberGenerator
 public:
     int getRandomInt(int min, int max);
     double getRandomDouble();
+    double getRandomGaussian(double mean, double stddev);
     std::mt19937& getGenerator();
 
 protected:

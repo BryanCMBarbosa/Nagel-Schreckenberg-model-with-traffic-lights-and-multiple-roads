@@ -48,7 +48,12 @@ void Simulation::setup()
         double brakeProb = roadConfig.value("brakeProbability", 0.1);
         bool isPeriodic = roadConfig.value("isPeriodic", true);
         double alpha = roadConfig.value("alpha", 0.0);
+        if (alpha > 0.0)
+            roadsWithAlpha.push_back(roadID);
+
         double beta = roadConfig.value("beta", 0.0);
+        if (beta > 0.0)
+            roadsWithBeta.push_back(roadID);
 
         auto road = std::make_shared<Road>(roadID, roadSize, isPeriodic, alpha, beta, maxSpeed, brakeProb, numCars, rng, flowQueueSize);
         roads.emplace_back(road);
@@ -222,6 +227,15 @@ void Simulation::run()
 {
     std::cout << "Running simulation...\n";
     int numberRoads = roads.size();
+    TrafficVolumeGenerator trafficGen(
+        roads,
+        roadsWithAlpha,
+        0.4, 8.0, 2.0, true, 0.01,
+        0.35, 12.0, 3.0, false, 0.01,
+        rng,                  
+        0.05,                 
+        300                   
+    );
 
     simulationResults["episodes"] = nlohmann::json::array();
 
@@ -234,6 +248,8 @@ void Simulation::run()
         printRoadStates();
         for (unsigned long long episode = 0; episode < episodes; episode++)
         {
+            trafficGen.simulateStep();
+
             for (auto& group : trafficLightGroups)
             {
                 group->update();
@@ -294,6 +310,8 @@ void Simulation::printRoadStates() const
                 carLine << " _ ";
             }
         }
+        if (roads[roadIndex]->alpha > 0.0)
+            std::cout << "CURRENT ALPHA: " << roads[roadIndex]->alpha << std::endl;
 
         std::cout << std::setw(6) << tlLine.str() << "\n";
         std::cout << std::setw(6) << carLine.str() << "\n\n";
