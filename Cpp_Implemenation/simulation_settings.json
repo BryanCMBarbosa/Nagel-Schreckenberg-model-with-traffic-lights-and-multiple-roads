@@ -16,7 +16,7 @@
           [1, 11, 11, 0.9, 0.8],
           [3, 4, 5, 0.0, 1.0]
         ],
-        "alpha": 0.0,
+        "alphaWeight": 0.0,
         "beta": 0.0,
         "numCars": 6
       },
@@ -30,7 +30,7 @@
         [
           [2, 7, 0, 0.6, 0.0]
         ],
-        "alpha": 0.0,
+        "alphaWeight": 0.0,
         "beta": 0.0,
         "numCars": 3
       },
@@ -43,7 +43,7 @@
         "sharedSections":
         [
         ],
-        "alpha": 0.0,
+        "alphaWeight": 0.0,
         "beta": 0.8,
         "numCars": 3
       },
@@ -56,7 +56,7 @@
         "sharedSections":
         [
         ],
-        "alpha": 0.25,
+        "alphaWeight": 0.25,
         "beta": 0.0,
         "numCars": 3
       }

@@ -33,6 +33,8 @@ void Simulation::setup()
 
     const auto& roadsConfig = config["simulation"]["roads"];
 
+    std::vector<double> alphas;
+
     for (const auto& roadConfig : roadsConfig)
     {
         int roadID = roadConfig.value("roadID", 0);
@@ -47,9 +49,13 @@ void Simulation::setup()
         int maxSpeed = roadConfig.value("maxSpeed", 5);
         double brakeProb = roadConfig.value("brakeProbability", 0.1);
         bool isPeriodic = roadConfig.value("isPeriodic", true);
-        double alpha = roadConfig.value("alpha", 0.0);
+        double alpha = roadConfig.value("alphaWeight", 0.0);
         if (alpha > 0.0)
+        {
             roadsWithAlpha.push_back(roadID);
+            alphaWeights.add(roadID, alpha);
+            alphas.push_back(alpha);
+        }
 
         double beta = roadConfig.value("beta", 0.0);
         if (beta > 0.0)
@@ -60,6 +66,12 @@ void Simulation::setup()
         road->setupSections();
         road->addCars(numCars);
     }
+
+    double alphasSum = std::accumulate(alphas.begin(), alphas.end(), 0.0);
+    if ((std::abs(alphasSum - 1.0) > 1e-6) && alphasSum != 0.0)
+        for (auto& id : roadsWithAlpha)
+            alphaWeights.add(id, (alphaWeights.get(id)/alphasSum));
+
     if (config["simulation"].contains("roads"))
     {
         const auto& roadsConfig = config["simulation"]["roads"];
@@ -188,6 +200,9 @@ void Simulation::setup()
         group->initialize();
     }
 
+    currentDay = 0;
+    currentHour = 0;
+
     printSimulationSettings();
 }
 
@@ -218,6 +233,7 @@ void Simulation::printSimulationSettings() const
         //std::cout << std::setw(20) << "Changing Road Prob" << road->changingRoadProb << "\n";
         std::cout << std::setw(20) << "Alpha" << road->alpha << "\n";
         std::cout << std::setw(20) << "Beta" << road->beta << "\n";
+        std::cout << std::string(35, ':') << "\n";
     }
     std::cout << "Press any key to continue...";
     std::cin.get();
@@ -230,8 +246,7 @@ void Simulation::run()
     TrafficVolumeGenerator trafficGen(
         roads,
         roadsWithAlpha,
-        0.4, 8.0, 2.0, true, 0.01,
-        0.35, 12.0, 3.0, false, 0.01,
+        alphaWeights,
         rng,                  
         0.05,                 
         300                   
@@ -248,7 +263,9 @@ void Simulation::run()
         printRoadStates();
         for (unsigned long long episode = 0; episode < episodes; episode++)
         {
-            trafficGen.simulateStep();
+            int currentHour = (episode / 3600) % 24; //Calculate current hour based on elapsed time
+            int currentDay = (episode / 86400) % 7;  //Calculate current day of the week (0=Sunday, 6=Saturday)
+            trafficGen.update(episode, currentDay);
 
             for (auto& group : trafficLightGroups)
             {
@@ -310,8 +327,6 @@ void Simulation::printRoadStates() const
                 carLine << " _ ";
             }
         }
-        if (roads[roadIndex]->alpha > 0.0)
-            std::cout << "CURRENT ALPHA: " << roads[roadIndex]->alpha << std::endl;
 
         std::cout << std::setw(6) << tlLine.str() << "\n";
         std::cout << std::setw(6) << carLine.str() << "\n\n";

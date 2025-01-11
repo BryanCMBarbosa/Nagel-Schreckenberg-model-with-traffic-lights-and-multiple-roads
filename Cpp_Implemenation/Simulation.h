@@ -7,6 +7,7 @@
 #include "Road.h"
 #include "TrafficLightGroup.h"
 #include "TrafficVolumeGenerator.h"
+#include "Dictionary.h"
 #include <vector>
 #include <set>
 #include <unordered_map>
@@ -29,11 +30,14 @@ private:
     std::vector<std::shared_ptr<TrafficLightGroup>> trafficLightGroups;
     RandomNumberGenerator rng;
     unsigned long long episodes;
+    int currentHour;
+    int currentDay;
     int flowQueueSize;
     bool undefinedDuration;
     nlohmann::json simulationResults;
     std::vector<int> roadsWithAlpha;
     std::vector<int> roadsWithBeta;
+    Dictionary<int, double> alphaWeights;
 
 public:
     Simulation(const std::string& configFilePath);

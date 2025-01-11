@@ -1,76 +1,55 @@
 #include "TrafficVolumeGenerator.h"
 
-TrafficVolumeGenerator::TrafficVolumeGenerator(const std::vector<std::shared_ptr<Road>>& roads, const std::vector<int>& roadsWithAlpha,
-                           double weekdayAmplitude, double weekdayMean, double weekdaySigma, bool weekdayBimodal, double weekdayBaseline,
-                           double weekendAmplitude, double weekendMean, double weekendSigma, bool weekendBimodal, double weekendBaseline,
-                           RandomNumberGenerator& rng,
-                           double stdDev = 0.05,
-                           int updateIntervalSeconds = 300)
+TrafficVolumeGenerator::TrafficVolumeGenerator(const std::vector<std::shared_ptr<Road>>& roads, const std::vector<int>& roadsWithAlpha, Dictionary<int, double>& alphaWeights, RandomNumberGenerator& rng, double stdDev = 0.025, int updateIntervalSeconds = 300)
         : roads(roads),
           roadsWithAlpha(roadsWithAlpha),
-          totalAlpha(0.0),
-          updateInterval(updateIntervalSeconds),
-          elapsedTime(0),
+          alphaWeights(alphaWeights),
           rng(rng),
-          randomnessStdDev(stdDev),
-          weekdayPattern{weekdayAmplitude, weekdayMean, weekdaySigma, weekdayBimodal, weekdayBaseline},
-          weekendPattern{weekendAmplitude, weekendMean, weekendSigma, weekendBimodal, weekendBaseline}
-    {
-        for (const auto& road : roads)
-        {
-            totalAlpha += road->alpha;
-        }
-    }
-
-void TrafficVolumeGenerator::simulateStep()
+          updateInterval(updateIntervalSeconds),
+          randomnessStdDev(stdDev)
 {
-    elapsedTime++;
-    if (elapsedTime % updateInterval == 0)
-    {
-        int currentHour = (elapsedTime / 3600) % 24; //Calculate current hour based on elapsed time
-        int currentDay = (elapsedTime / 86400) % 7;  //Calculate current day of the week (0=Sunday, 6=Saturday)
-        rebalanceAlpha(currentHour, currentDay);
-    }
 }
 
-void TrafficVolumeGenerator::rebalanceAlpha(int currentHour, int currentDay)
+void TrafficVolumeGenerator::update(unsigned long long timeStep, int currentDay)
 {
-    const TrafficPatternParams* pattern;
+    if (timeStep % updateInterval == 0)
+        rebalanceAlpha(timeStep, currentDay);
+}
 
-    if (currentDay == 0 || currentDay == 6) //Weekend (Sunday=0, Saturday=6)
-        pattern = &weekendPattern;
+double TrafficVolumeGenerator::weekdayPattern(unsigned long long timeStep, double peak1Time = 25200, double peak2Time = 54000)
+{
+    double peak1 = 0.2 * exp(-pow(timeStep - peak1Time, 2) / (2 * pow(5000, 2)));
+    double peak2 = 0.2 * exp(-pow(timeStep - peak2Time, 2) / (2 * pow(8000, 2)));
+    double valley = -0.15 * exp(-pow(timeStep - 10800, 2) / (2 * pow(4000, 2)));
+    double baseline = 0.16;
+    double betweenPeaks = 0.09 * exp(-pow(timeStep - 39600, 2) / (2 * pow(5000, 2)));
+
+    return peak1 + peak2 + valley + baseline + betweenPeaks;
+    
+    //Combination of all components
+    return peak1 + peak2 + valley + baseline + betweenPeaks;
+}
+
+double TrafficVolumeGenerator::weekendPattern(unsigned long long timeStep)
+{
+    double peak = 0.13 * exp(-pow(timeStep - 53100, 2) / (2 * pow(25000, 2))); //Peak at 53100
+    double valley = -0.14 * exp(-pow(timeStep - 10800, 2) / (2 * pow(8000, 2))); //Valley at 10800
+    double baseline = 0.15; //Baseline offset
+
+    //Combination of components
+    return peak + valley + baseline;
+}
+
+void TrafficVolumeGenerator::rebalanceAlpha(unsigned long long timeStep, int currentDay)
+{
+    double meanProbOnDayTime = 0.0;
+    if (currentDay == 0 || currentDay == 6) //(0=Sunday, 6=Saturday)
+        meanProbOnDayTime = weekendPattern(timeStep);
     else
-        pattern = &weekdayPattern;
+        meanProbOnDayTime = weekdayPattern(timeStep);
+    
+    double alphaProb = std::clamp(rng.getRandomGaussian(meanProbOnDayTime, randomnessStdDev), 0.005, 1.0);
 
-    double timeMultiplier = 0.0;
-
-    if (pattern->isBimodal)
-    {
-        //Bimodal pattern (e.g. weekday with morning and afternoon peaks)
-        double morningComponent = 0.4 * pattern->a * std::exp(-std::pow(currentHour - pattern->mu, 2) / (2 * std::pow(pattern->sigma, 2)));
-        double afternoonComponent = 0.4 * pattern->a * std::exp(-std::pow(currentHour - (pattern->mu + 8), 2) / (2 * std::pow(pattern->sigma, 2))); //Offset by 8 hours for the second peak
-        double valleyBaseline = 0.01; //Midday valley baseline
-        timeMultiplier = morningComponent + afternoonComponent + valleyBaseline;
-    }
-    else
-    {
-        double peakComponent = 0.35 * pattern->a * std::exp(-std::pow(currentHour - pattern->mu, 2) / (2 * std::pow(pattern->sigma, 2)));
-        double secondaryComponent = 0.2 * 0.35 * pattern->a * std::exp(-std::pow(currentHour - (pattern->mu + 6), 2) / (2 * std::pow(pattern->sigma * 1.5, 2)));
-        double smoothingFactor = std::exp(-std::pow(currentHour - (pattern->mu + 6), 2) / (2 * std::pow(pattern->sigma * 2, 2)));
-        timeMultiplier = (peakComponent + secondaryComponent) * smoothingFactor + pattern->baseline * (1 - smoothingFactor);
-    }
-
-    //Add randomness to the timeMultiplier using Gaussian sampling
-    timeMultiplier = rng.getRandomGaussian(timeMultiplier, randomnessStdDev);
-
-    //Ensure timeMultiplier remains within reasonable bounds
-    if (timeMultiplier < 0.0)
-        timeMultiplier = 0.0;
-
-    //Rebalance alpha for each road based on the current time multiplier
     for (auto& index : roadsWithAlpha)
-    {
-        double normalizedAlpha = roads[index]->alpha / totalAlpha;
-        roads[index]->alpha = normalizedAlpha * timeMultiplier * totalAlpha;
-    }
+        roads[index]->alpha = alphaWeights.get(index) * alphaProb;
 }

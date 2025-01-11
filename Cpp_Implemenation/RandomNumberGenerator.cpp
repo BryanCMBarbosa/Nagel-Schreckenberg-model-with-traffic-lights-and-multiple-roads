@@ -16,6 +16,12 @@ double RandomNumberGenerator::getRandomDouble()
     return distrib(generator);
 }
 
+double RandomNumberGenerator::getRandomInRange(double min, double max)
+{
+    std::uniform_real_distribution<double> distrib(min, max);
+    return distrib(generator);
+}
+
 double RandomNumberGenerator::getRandomGaussian(double mean, double stddev)
 {
     std::normal_distribution<double> distrib(mean, stddev);

@@ -6,33 +6,23 @@
 #include <cmath>
 #include "Road.h"
 #include "RandomNumberGenerator.h"
+#include "Dictionary.h"
 
 class TrafficVolumeGenerator
 {
 public:
-    TrafficVolumeGenerator(const std::vector<std::shared_ptr<Road>>& roads, const std::vector<int>& roadsWithAlpha, double weekdayAmplitude, double weekdayMean, double weekdaySigma, bool weekdayBimodal, double weekdayBaseline, double weekendAmplitude, double weekendMean, double weekendSigma, bool weekendBimodal, double weekendBaseline, RandomNumberGenerator& rng, double stdDev, int updateIntervalSeconds);
-    void simulateStep();
-    void rebalanceAlpha(int currentHour, int currentDay);
+    TrafficVolumeGenerator(const std::vector<std::shared_ptr<Road>>& roads, const std::vector<int>& roadsWithAlpha, Dictionary<int, double>& alphaWeights, RandomNumberGenerator& rng, double stdDev, int updateIntervalSeconds);
+    void update(unsigned long long timeStep, int currentDay);
+    void rebalanceAlpha(unsigned long long timeStep, int currentDay);
+    double weekdayPattern(unsigned long long timeStep, double peak1Time, double peak2Time);
+    double weekendPattern(unsigned long long timeStep);
 
 private:
     std::vector<std::shared_ptr<Road>> roads;
     std::vector<int> roadsWithAlpha;
-    double totalAlpha;
+    Dictionary<int, double> alphaWeights;
     int updateInterval; //Time interval for updates in time steps
-    int elapsedTime; //Tracks elapsed time in the simulation
     RandomNumberGenerator& rng;
-
-    struct TrafficPatternParams
-    {
-        double a; //Amplitude
-        double mu; //Mean
-        double sigma; //Standard deviation
-        bool isBimodal; //Determines if the pattern has a bimodal distribution
-        double baseline; //Baseline traffic volume to prevent zero volume
-    };
-
-    TrafficPatternParams weekdayPattern;
-    TrafficPatternParams weekendPattern;
     double randomnessStdDev;
 };
 
