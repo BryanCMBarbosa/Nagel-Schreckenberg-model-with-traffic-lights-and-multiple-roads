@@ -17,9 +17,7 @@ Simulation::Simulation(const std::string& configFilePath) : undefinedDuration(fa
 void Simulation::setup()
 {
     if (!config.contains("simulation") || !config["simulation"].contains("roads"))
-    {
         throw std::runtime_error("Invalid configuration: missing 'simulation' or 'roads' key.");
-    }
 
     if (config["simulation"].contains("episodes"))
         episodes = config["simulation"]["episodes"];
@@ -42,9 +40,7 @@ void Simulation::setup()
 
         int numCars = 0;
         if (roadConfig.contains("numCars"))
-        {
             numCars = roadConfig["numCars"];
-        }
 
         int maxSpeed = roadConfig.value("maxSpeed", 5);
         double brakeProb = roadConfig.value("brakeProbability", 0.1);
@@ -61,7 +57,7 @@ void Simulation::setup()
         if (beta > 0.0)
             roadsWithBeta.push_back(roadID);
 
-        auto road = std::make_shared<Road>(roadID, roadSize, isPeriodic, alpha, beta, maxSpeed, brakeProb, numCars, rng, queueSize);
+        auto road = std::make_shared<Road>(roadID, roadSize, isPeriodic, beta, maxSpeed, brakeProb, numCars, rng, queueSize);
         roads.emplace_back(road);
         road->setupSections();
         road->addCars(numCars);
@@ -243,6 +239,7 @@ void Simulation::run()
 {
     std::cout << "Running simulation...\n";
     int numberRoads = roads.size();
+
     TrafficVolumeGenerator trafficGen(
         roads,
         roadsWithAlpha,
@@ -263,19 +260,15 @@ void Simulation::run()
         printRoadStates();
         for (unsigned long long episode = 0; episode < episodes; episode++)
         {
-            int currentHour = (episode / 3600) % 24; //Calculate current hour based on elapsed time
-            int currentDay = (episode / 86400) % 7;  //Calculate current day of the week (0=Sunday, 6=Saturday)
+            currentHour = (episode / 3600) % 24; //Calculate current hour based on elapsed time
+            currentDay = (episode / 86400) % 7;  //Calculate current day of the week (0=Sunday, 6=Saturday)
             trafficGen.update(episode, currentDay);
 
             for (auto& group : trafficLightGroups)
-            {
                 group->update();
-            }
 
             for (int roadIndex = 0; roadIndex < numberRoads; roadIndex++)
-            {
                 roads[roadIndex]->simulateStep();
-            }
 
             collectMetrics(episode);
 

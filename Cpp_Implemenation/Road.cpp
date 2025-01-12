@@ -1,7 +1,7 @@
 #include "Road.h"
 
-Road::Road(int id, int roadSize, bool isPeriodic, double alpha, double beta, int maxSpd, double brakeP, int initialNumCars, RandomNumberGenerator& gen, int queueSize = 100)
-    : roadID(id), roadSize(roadSize), isPeriodic(isPeriodic), alpha(alpha), beta(beta), maxSpeed(maxSpd), brakeProb(brakeP), initialNumCars(initialNumCars), rng(gen), spaceAveragedFlow(queueSize), averageTravelTimes(queueSize), residenceTimes(queueSize), travelTimes(queueSize), averageSpeed(0.0), cumulativeTimeSpaceAveragedFlow(0.0) 
+Road::Road(int id, int roadSize, bool isPeriodic, double beta, int maxSpd, double brakeP, int initialNumCars, RandomNumberGenerator& gen, int queueSize = 100)
+    : roadID(id), roadSize(roadSize), isPeriodic(isPeriodic), beta(beta), maxSpeed(maxSpd), brakeProb(brakeP), initialNumCars(initialNumCars), rng(gen), spaceAveragedFlow(queueSize), averageTravelTimes(queueSize), residenceTimes(queueSize), travelTimes(queueSize), averageSpeed(0.0), cumulativeTimeSpaceAveragedFlow(0.0) 
 {
 }
 
