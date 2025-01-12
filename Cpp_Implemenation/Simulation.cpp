@@ -26,10 +26,10 @@ void Simulation::setup()
     else
         undefinedDuration = true;
 
-    if (config["simulation"].contains("flowQueueSize"))
-        flowQueueSize = config["simulation"]["flowQueueSize"];
+    if (config["simulation"].contains("queueSize"))
+        queueSize = config["simulation"]["queueSize"];
     else
-        flowQueueSize = 10;
+        queueSize = 10;
 
     const auto& roadsConfig = config["simulation"]["roads"];
 
@@ -61,7 +61,7 @@ void Simulation::setup()
         if (beta > 0.0)
             roadsWithBeta.push_back(roadID);
 
-        auto road = std::make_shared<Road>(roadID, roadSize, isPeriodic, alpha, beta, maxSpeed, brakeProb, numCars, rng, flowQueueSize);
+        auto road = std::make_shared<Road>(roadID, roadSize, isPeriodic, alpha, beta, maxSpeed, brakeProb, numCars, rng, queueSize);
         roads.emplace_back(road);
         road->setupSections();
         road->addCars(numCars);

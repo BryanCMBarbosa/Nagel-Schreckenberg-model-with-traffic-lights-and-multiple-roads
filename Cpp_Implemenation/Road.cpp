@@ -1,7 +1,7 @@
 #include "Road.h"
 
-Road::Road(int id, int roadSize, bool isPeriodic, double alpha, double beta, int maxSpd, double brakeP, int initialNumCars, RandomNumberGenerator& gen, int flowQueueSize = 100)
-    : roadID(id), roadSize(roadSize), isPeriodic(isPeriodic), alpha(alpha), beta(beta), maxSpeed(maxSpd), brakeProb(brakeP), initialNumCars(initialNumCars), rng(gen), spaceAveragedFlow(flowQueueSize), averageSpeed(0.0), cumulativeTimeSpaceAveragedFlow(0.0) 
+Road::Road(int id, int roadSize, bool isPeriodic, double alpha, double beta, int maxSpd, double brakeP, int initialNumCars, RandomNumberGenerator& gen, int queueSize = 100)
+    : roadID(id), roadSize(roadSize), isPeriodic(isPeriodic), alpha(alpha), beta(beta), maxSpeed(maxSpd), brakeProb(brakeP), initialNumCars(initialNumCars), rng(gen), spaceAveragedFlow(queueSize), averageTravelTimes(queueSize), residenceTimes(queueSize), travelTimes(queueSize), averageSpeed(0.0), cumulativeTimeSpaceAveragedFlow(0.0) 
 {
 }
 
@@ -108,7 +108,7 @@ void Road::simulateStep()
             bool carLeaves = rng.getRandomDouble() < beta;
             if (carLeaves)
             {
-                residenceTimes.push_back(car->residenceTime);
+                residenceTimes.push(car->residenceTime);
                 sections[lastSite]->currentCar = nullptr;
                 carsPositions.erase(std::remove(carsPositions.begin(), carsPositions.end(), lastSite), carsPositions.end());
             }
@@ -119,6 +119,11 @@ void Road::simulateStep()
     calculateGeneralDensity();
     calculateAverageDistanceHeadway();
     calculateAverageSpeed();
+}
+
+void Road::calculateAverageTravelTime()
+{
+    averageTravelTimes.push(std::accumulate(travelTimes.begin(), travelTimes.end(), 0.0)/travelTimes.size());
 }
 
 void Road::calculateGeneralDensity()
@@ -398,6 +403,10 @@ void Road::moveCars()
 
                     if (newRoad->sections[newPos]->currentCar == nullptr)
                     {
+                        travelTimes.push(car->timeOnCurrentRoad);
+                        car->timeOnCurrentRoad = 0;
+                        calculateAverageTravelTime();
+
                         if (newRoad->sections[newPos]->trafficLight && !newRoad->sections[newPos]->trafficLight->state)
                         {
                             car->speed = 0;

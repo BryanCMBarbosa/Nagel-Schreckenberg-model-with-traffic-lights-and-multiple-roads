@@ -2,7 +2,7 @@
   "simulation":
   {
     "episodes": 86400,
-    "flowQueueSize": 100,
+    "queueSize": 100,
     "roads":
     [
       {

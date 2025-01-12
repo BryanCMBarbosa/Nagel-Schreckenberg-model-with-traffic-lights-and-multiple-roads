@@ -9,7 +9,8 @@ Car::Car(int pos, int roadID)
       willSurpassSharedSection(false), 
       indexAndTargetRoad(-1, std::weak_ptr<Road>()),
       originalRoadID(roadID),
-      residenceTime(0)
+      residenceTime(0),
+      timeOnCurrentRoad(0)
 {
 }
 
@@ -24,7 +25,8 @@ Car::Car(Car&& other) noexcept
       sharedSectionIndex(other.sharedSectionIndex), 
       indexAndTargetRoad(std::move(other.indexAndTargetRoad)),
       originalRoadID(other.originalRoadID),
-      residenceTime(other.residenceTime)
+      residenceTime(other.residenceTime),
+      timeOnCurrentRoad(other.timeOnCurrentRoad)
 {
     other.indexAndTargetRoad = std::make_pair(-1, std::weak_ptr<Road>());
 }
@@ -44,6 +46,7 @@ Car& Car::operator=(Car&& other) noexcept
         indexAndTargetRoad = std::move(other.indexAndTargetRoad);
         originalRoadID = other.originalRoadID;
         residenceTime = other.residenceTime;
+        timeOnCurrentRoad = other.timeOnCurrentRoad;
 
         other.indexAndTargetRoad = std::make_pair(-1, std::weak_ptr<Road>());
     }

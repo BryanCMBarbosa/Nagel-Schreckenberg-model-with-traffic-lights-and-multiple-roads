@@ -32,7 +32,7 @@ private:
     unsigned long long episodes;
     int currentHour;
     int currentDay;
-    int flowQueueSize;
+    int queueSize;
     bool undefinedDuration;
     nlohmann::json simulationResults;
     std::vector<int> roadsWithAlpha;

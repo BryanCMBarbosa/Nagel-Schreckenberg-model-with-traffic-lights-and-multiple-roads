@@ -35,16 +35,19 @@ public:
     Dictionary<int, double> changingRoadProbs;
     int initialNumCars;
     std::vector<int> carsPositions;
-    std::vector<int> residenceTimes;
+    LimitedQueue<int> residenceTimes;
+    LimitedQueue<int> travelTimes;
+    LimitedQueue<double> averageTravelTimes;
     std::vector<std::shared_ptr<TrafficLight>> trafficLights;
     RandomNumberGenerator& rng;
 
-    Road(int id, int roadSize, bool isPeriodic, double alpha, double beta, int maxSpd, double brakeP, int initialNumCars, RandomNumberGenerator& gen, int flowQueueSize);
+    Road(int id, int roadSize, bool isPeriodic, double alpha, double beta, int maxSpd, double brakeP, int initialNumCars, RandomNumberGenerator& gen, int queueSize);
     Road(const Road&) = delete;
     Road& operator=(const Road&) = delete;
     void setupSections();
     void simulateStep();
     void moveCars();
+    void calculateAverageTravelTime();
     void calculateGeneralDensity();
     double calculateRegionalDensity(int leftBoundary, int rightBoundary);
     void calculateSpaceAveragedFlow();
