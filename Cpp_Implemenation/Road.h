@@ -5,6 +5,7 @@
 #include <memory>
 #include <iostream>
 #include <random>
+#include <limits>
 #include "RoadSection.h"
 #include "TrafficLight.h"
 #include "RandomNumberGenerator.h"
@@ -35,9 +36,13 @@ public:
     Dictionary<int, double> changingRoadProbs;
     int initialNumCars;
     std::vector<int> carsPositions;
+    std::vector<int> trafficLightPositions;
     LimitedQueue<int> residenceTimes;
     LimitedQueue<int> travelTimes;
     LimitedQueue<double> averageTravelTimes;
+    std::vector<int> timeHeadwayPoints; // Indices of time headway points
+    Dictionary<int, unsigned long long> lastTimestamps; // Last timestamp a car passed each point
+    Dictionary<int, LimitedQueue<unsigned long long>> loggedTimeHeadways; // Logged time headways for each point
     std::vector<std::shared_ptr<TrafficLight>> trafficLights;
     RandomNumberGenerator& rng;
 
@@ -45,7 +50,7 @@ public:
     Road(const Road&) = delete;
     Road& operator=(const Road&) = delete;
     void setupSections();
-    void simulateStep();
+    void simulateStep(unsigned long long currentTime);
     void moveCars();
     void calculateAverageTravelTime();
     void calculateGeneralDensity();
@@ -56,6 +61,9 @@ public:
     void calculateAverageDistanceHeadway();
     void calculateAverageTimeHeadway();
     void calculateAverageSpeed();
+    void setupTimeHeadwayPoints(int queueSize);
+    void logTimeHeadways(unsigned long long currentTime);
+    const Dictionary<int, LimitedQueue<unsigned long long>>& getLoggedTimeHeadways() const;
     std::vector<int> getRoadRepresentation() const;
     std::vector<std::pair<int, int>> detectJams();
     void addCars(int numCars, int position = -1);

@@ -3,7 +3,7 @@
 template <typename KeyType, typename ValueType>
 void Dictionary<KeyType, ValueType>::add(const KeyType &key, const ValueType &value)
 {
-    data[key] = value;
+    data.emplace(key, value);
 }
 
 template <typename KeyType, typename ValueType>

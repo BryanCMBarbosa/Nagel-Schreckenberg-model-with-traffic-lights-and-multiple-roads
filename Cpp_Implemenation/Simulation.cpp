@@ -9,9 +9,7 @@ Simulation::Simulation(const std::string& configFilePath) : undefinedDuration(fa
         file.close();
     }
     else
-    {
         throw std::runtime_error("Unable to open configuration file.");
-    }
 }
 
 void Simulation::setup()
@@ -122,9 +120,7 @@ void Simulation::setup()
                     trafficLightGroups[groupID] = group;
                 }
                 else
-                {
                     group = trafficLightGroups[groupID];
-                }
 
                 group->setTransitionTime(transitionTime);
             }
@@ -158,9 +154,7 @@ void Simulation::setup()
                         {
                             int groupID = trafficLightConfig["groupID"];
                             if (groupID >= 0 && groupID < trafficLightGroups.size())
-                            {
                                 group = trafficLightGroups[groupID];
-                            }
                             else
                             {
                                 group = std::make_shared<TrafficLightGroup>();
@@ -178,23 +172,20 @@ void Simulation::setup()
 
                     road->sections[position]->trafficLight = trafficLight;
                     road->trafficLights.push_back(trafficLight);
+                    road->trafficLightPositions.push_back(position);
                 }
                 else
-                {
                     std::cerr << "Invalid position: " << position << " on roadID: " << roadID << std::endl;
-                }
             }
             else
-            {
                 std::cerr << "Invalid roadID: " << roadID << std::endl;
-            }
         }
     }
+    for (auto& road : roads)
+        road->setupTimeHeadwayPoints(queueSize);
 
     for (auto& group : trafficLightGroups)
-    {
         group->initialize();
-    }
 
     currentDay = 0;
     currentHour = 0;
@@ -268,7 +259,7 @@ void Simulation::run()
                 group->update();
 
             for (int roadIndex = 0; roadIndex < numberRoads; roadIndex++)
-                roads[roadIndex]->simulateStep();
+                roads[roadIndex]->simulateStep(episode);
 
             collectMetrics(episode);
 
@@ -330,6 +321,8 @@ void Simulation::collectMetrics(int episode)
 {
     nlohmann::json episodeData;
     episodeData["episode"] = episode;
+    episodeData["currentDay"] = currentDay;
+    episodeData["currentHour"] = currentHour;
 
     for (const auto& road : roads)
     {
@@ -340,9 +333,7 @@ void Simulation::collectMetrics(int episode)
         roadData["averageDistanceHeadway"] = road->averageDistanceHeadway;
         roadData["averageTimeHeadway"] = road->averageTimeHeadway;
         roadData["averageSpeed"] = road->averageSpeed;
-
         roadData["roadRepresentation"] = road->getRoadRepresentation();
-
         episodeData["roads"].push_back(roadData);
     }
 

@@ -14,7 +14,7 @@ void Road::setupSections()
     }
 }
 
-void Road::simulateStep()
+void Road::simulateStep(unsigned long long currentTime)
 {
     if (!isPeriodic && sections[0]->connectedSections.empty() && rng.getRandomDouble() < alpha)
     {
@@ -94,6 +94,7 @@ void Road::simulateStep()
     calculateSpaceAveragedFlow();
     calculateCumulativeTimeSpaceAveragedFlow();
     calculateAverageTimeHeadway();
+    logTimeHeadways(currentTime);
 
     //Move cars based on their current speeds
     moveCars();
@@ -244,6 +245,62 @@ void Road::calculateAverageTimeHeadway()
     }
 
     averageTimeHeadway = totalHeadway / spaceAveragedFlow.size();
+}
+
+void Road::setupTimeHeadwayPoints(int queueSize)
+{
+    timeHeadwayPoints.clear();
+
+    //General point in the middle of the road
+    timeHeadwayPoints.push_back(roadSize / 2);
+
+    //Points 4 sites before each traffic light
+    for (int position : trafficLightPositions)
+    {
+        int point;
+        if (isPeriodic)
+            point = (position - 4 + roadSize) % roadSize; //Handle periodic wrapping
+        else
+        {
+            point = position - 4; //No wrapping for open boundaries
+            if (point < 0) continue; //Skip invalid points for open boundaries
+        }
+
+        if (std::find(timeHeadwayPoints.begin(), timeHeadwayPoints.end(), point) == timeHeadwayPoints.end())
+            timeHeadwayPoints.push_back(point); //Avoid duplicates
+    }
+
+    //Initialize last timestamps and queues for all points
+    for (int point : timeHeadwayPoints)
+    {
+        lastTimestamps.add(point, std::numeric_limits<unsigned long long>::max()); //No car has passed yet
+        loggedTimeHeadways.add(point, LimitedQueue<unsigned long long>(queueSize));
+    }
+}
+
+void Road::logTimeHeadways(unsigned long long currentTime)
+{
+    for (int point : timeHeadwayPoints)
+    {
+        auto& section = sections[point];
+        if (section->currentCar)
+        {
+            //A car is passing this point
+            if (lastTimestamps.get(point) != std::numeric_limits<unsigned long long>::max())
+            {
+                //Calculate time headway
+                unsigned long long timeHeadway = currentTime - lastTimestamps.get(point);
+                loggedTimeHeadways.get(point).push(timeHeadway); // Add to point-specific queue
+            }
+            //Update the last timestamp
+            lastTimestamps.add(point, currentTime);
+        }
+    }
+}
+
+const Dictionary<int, LimitedQueue<unsigned long long>>& Road::getLoggedTimeHeadways() const
+{
+    return loggedTimeHeadways;
 }
 
 void Road::calculateAverageSpeed()
