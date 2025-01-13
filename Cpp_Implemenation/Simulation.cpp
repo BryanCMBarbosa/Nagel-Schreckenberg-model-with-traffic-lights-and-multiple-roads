@@ -247,7 +247,7 @@ void Simulation::run()
     std::ostringstream simInfoStream;
     simInfoStream << std::put_time(std::localtime(&now_time), "%Y-%m-%d_%H-%M-%S");
     simInfoStream << "eps_" << episodes
-                  << "_roads_" << roads.size();
+                  << "_roads_" << numberRoads;
 
     std::string filename = "sim_results_" + simInfoStream.str() + ".json";
 
