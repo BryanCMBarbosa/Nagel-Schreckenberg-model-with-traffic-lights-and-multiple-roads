@@ -2,12 +2,6 @@
 #define SIMULATION_H
 
 #include <fstream>
-#include <nlohmann/json.hpp>
-#include "RandomNumberGenerator.h"
-#include "Road.h"
-#include "TrafficLightGroup.h"
-#include "TrafficVolumeGenerator.h"
-#include "Dictionary.h"
 #include <vector>
 #include <set>
 #include <unordered_map>
@@ -19,6 +13,14 @@
 #include <random>
 #include <chrono>
 #include <thread>
+#include <ctime>
+#include <iomanip>
+#include <nlohmann/json.hpp>
+#include "Dictionary.h"
+#include "RandomNumberGenerator.h"
+#include "Road.h"
+#include "TrafficLightGroup.h"
+#include "TrafficVolumeGenerator.h"
 
 class TrafficLightGroup;
 
