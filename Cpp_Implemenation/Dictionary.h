@@ -17,6 +17,11 @@ public:
     ValueType get(const KeyType &key) const;
     void remove(const KeyType &key);
     bool isThere(const KeyType &key) const;
+
+    auto begin() { return data.begin(); }
+    auto end() { return data.end(); }
+    auto begin() const { return data.begin(); }
+    auto end() const { return data.end(); }
 };
 
 #include "Dictionary.tpp"

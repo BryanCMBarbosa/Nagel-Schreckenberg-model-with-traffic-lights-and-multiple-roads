@@ -317,7 +317,7 @@ void Simulation::printRoadStates() const
     }
 }
 
-void Simulation::collectMetrics(int episode)
+void Simulation::collectMetrics(unsigned long long episode)
 {
     nlohmann::json episodeData;
     episodeData["episode"] = episode;
@@ -333,7 +333,24 @@ void Simulation::collectMetrics(int episode)
         roadData["averageDistanceHeadway"] = road->averageDistanceHeadway;
         roadData["averageTimeHeadway"] = road->averageTimeHeadway;
         roadData["averageSpeed"] = road->averageSpeed;
+        roadData["alpha"] = road->alpha;
+        roadData["beta"] = road->beta;
+        roadData["numCars"] = road->carsPositions.size();
         roadData["roadRepresentation"] = road->getRoadRepresentation();
+
+        nlohmann::json timeHeadwaysData;
+        const auto& timeHeadways = road->getLoggedTimeHeadways();
+        for (const auto& [point, queue] : timeHeadways)
+        {
+            nlohmann::json pointData;
+            pointData["pointIndex"] = point;
+
+            std::vector<unsigned long long> timeHeadwayValues(queue.begin(), queue.end());
+            pointData["timeHeadways"] = timeHeadwayValues;
+
+            timeHeadwaysData.push_back(pointData);
+        }
+        roadData["timeHeadways"] = timeHeadwaysData;
         episodeData["roads"].push_back(roadData);
     }
 

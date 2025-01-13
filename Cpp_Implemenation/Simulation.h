@@ -47,7 +47,7 @@ public:
     void run();
     void clearScreen() const;
     void printRoadStates() const;
-    void collectMetrics(int episode);
+    void collectMetrics(unsigned long long episode);
     void serializeResults(const std::string& filename) const; 
 };
 
