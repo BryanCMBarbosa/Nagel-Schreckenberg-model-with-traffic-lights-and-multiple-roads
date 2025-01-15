@@ -11,6 +11,8 @@ class TrafficLight;
 class TrafficLightGroup : public std::enable_shared_from_this<TrafficLightGroup>
 {
 public:
+    std::vector<std::shared_ptr<TrafficLight>> trafficLights;
+    
     TrafficLightGroup();
 
     void addTrafficLight(std::shared_ptr<TrafficLight> trafficLight);
@@ -19,7 +21,6 @@ public:
     void setTransitionTime(int time);
 
 private:
-    std::vector<std::shared_ptr<TrafficLight>> trafficLights;
     int currentIndex;
     bool inGreenPhase;
     bool inTransitionPhase; 

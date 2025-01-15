@@ -20,12 +20,6 @@ template <typename KeyType, typename ValueType>
 void Dictionary<KeyType, ValueType>::remove(const KeyType &key)
 {
     data.erase(key);
-    /*
-    if (data.erase(key))
-        std::cout << "Removed key: " << key << "\n";
-    else
-        throw std::runtime_error("Key not found!");
-    */
 }
 
 template <typename KeyType, typename ValueType>

@@ -144,7 +144,7 @@ void Simulation::setup()
                     int timeClosed = trafficLightConfig.value("timeClosed", 10);
                     bool paired = trafficLightConfig.value("paired", false);
 
-                    auto trafficLight = std::make_shared<TrafficLight>(externalControl, timeOpen, timeClosed);
+                    auto trafficLight = std::make_shared<TrafficLight>(externalControl, timeOpen, timeClosed, roads[roadID], position);
 
                     if (paired)
                     {
@@ -182,7 +182,13 @@ void Simulation::setup()
         }
     }
     for (auto& road : roads)
+    {
         road->setupTimeHeadwayPoints(queueSize);
+        
+        std::sort(road->trafficLightPositions.begin(), road->trafficLightPositions.end());
+        for (auto& TLPosition : road->trafficLightPositions)
+            road->sections[TLPosition]->trafficLight->calculateDistanceToPreviousTrafficLight();
+    }
 
     for (auto& group : trafficLightGroups)
         group->initialize();
