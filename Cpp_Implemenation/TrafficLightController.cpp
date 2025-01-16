@@ -18,8 +18,6 @@ void TrafficLightController::setCycleTime(unsigned int time)
     cycleTime = time;
 }
 
-TrafficLightController::~TrafficLightController() {}
-
 double TrafficLightController::calculateFreeFlowTime(std::shared_ptr<TrafficLight> trafficLight) const
 {
     double distance = trafficLight->distanceToPreviousTrafficLight;
@@ -32,3 +30,5 @@ double TrafficLightController::calculateFreeFlowTime(std::shared_ptr<TrafficLigh
     double v_free = v_max - p;
     return distance / v_free;
 }
+
+TrafficLightController::~TrafficLightController() {}

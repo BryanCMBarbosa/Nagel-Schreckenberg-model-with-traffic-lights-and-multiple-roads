@@ -184,14 +184,34 @@ void Simulation::setup()
     for (auto& road : roads)
     {
         road->setupTimeHeadwayPoints(queueSize);
-        
+
         std::sort(road->trafficLightPositions.begin(), road->trafficLightPositions.end());
         for (auto& TLPosition : road->trafficLightPositions)
             road->sections[TLPosition]->trafficLight->calculateDistanceToPreviousTrafficLight();
     }
 
-    for (auto& group : trafficLightGroups)
-        group->initialize();
+    if (config["simulation"].contains("controllerType"))
+    {
+        std::string controllerType = config["simulation"]["controllerType"].get<std::string>();
+        if (controllerType == "synchronized")
+            trafficLightController = std::make_shared<SyncController>();
+        else if (controllerType == "green_wave")
+        {
+            double vMax = config["simulation"].value("vMax", 3.0);
+            double brakeProbability = config["simulation"].value("brakeProbability", 0.2);
+            size_t numberOfColumns = config["simulation"].value("numberOfColumns", 4);
+            trafficLightController = std::make_shared<GreenWaveController>(60, vMax, brakeProbability, numberOfColumns);
+        }
+        else if (controllerType == "random_offset")
+            trafficLightController = std::make_shared<RandomOffsetController>(rng);
+        else
+            throw std::invalid_argument("Unknown controller type in configuration.");
+            
+        for(auto& TLGroup : trafficLightGroups)
+            trafficLightController->addTrafficLightGroup(TLGroup);
+    }
+
+    trafficLightController->initialize();
 
     currentDay = 0;
     currentHour = 0;
@@ -270,8 +290,12 @@ void Simulation::run()
             currentDay = (episode / 86400) % 7;  //Calculate current day of the week (0=Sunday, 6=Saturday)
             trafficGen.update(episode, currentDay);
 
+            if (trafficLightController)
+                trafficLightController->update(episode);
+            /*
             for (auto& group : trafficLightGroups)
                 group->update();
+            */
 
             for (int roadIndex = 0; roadIndex < numberRoads; roadIndex++)
                 roads[roadIndex]->simulateStep(episode);

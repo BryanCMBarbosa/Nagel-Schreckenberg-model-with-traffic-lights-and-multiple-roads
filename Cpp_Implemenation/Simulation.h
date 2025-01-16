@@ -20,6 +20,10 @@
 #include "RandomNumberGenerator.h"
 #include "Road.h"
 #include "TrafficLightGroup.h"
+#include "TrafficLightController.h"
+#include "SyncController.h"
+#include "GreenWaveController.h"
+#include "RandomOffsetController.h"
 #include "TrafficVolumeGenerator.h"
 
 class TrafficLightGroup;
@@ -40,6 +44,7 @@ private:
     std::vector<int> roadsWithAlpha;
     std::vector<int> roadsWithBeta;
     Dictionary<int, double> alphaWeights;
+    std::shared_ptr<TrafficLightController> trafficLightController;
 
 public:
     Simulation(const std::string& configFilePath);

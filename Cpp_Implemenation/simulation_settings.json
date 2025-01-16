@@ -3,6 +3,11 @@
   {
     "episodes": 86400,
     "queueSize": 100,
+    "controllerType": "synchronized",
+    "cycleTime": 60,
+    "vMax": 3,
+    "brakeProbability": 0.2,
+    "numberOfColumns": 4,
 
     "roads":
     [
