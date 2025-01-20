@@ -4,10 +4,10 @@
     "episodes": 86400,
     "queueSize": 100,
     "controllerType": "synchronized",
-    "cycleTime": 60,
+    "cycleTime": 30,
     "vMax": 3,
     "brakeProbability": 0.2,
-    "numberOfColumns": 4,
+    "numberOfColumns": 1,
 
     "roads":
     [
@@ -24,7 +24,7 @@
         ],
         "alphaWeight": 0.0,
         "beta": 0.0,
-        "numCars": 6
+        "density": 0.2
       },
       {
         "roadID": 1,
@@ -38,7 +38,7 @@
         ],
         "alphaWeight": 0.0,
         "beta": 0.0,
-        "numCars": 3
+        "density": 0.4
       },
       {
         "roadID": 2,
@@ -51,7 +51,7 @@
         ],
         "alphaWeight": 0.0,
         "beta": 0.8,
-        "numCars": 3
+        "density": 0.1
       },
       {
         "roadID": 3,
@@ -64,7 +64,7 @@
         ],
         "alphaWeight": 0.25,
         "beta": 0.0,
-        "numCars": 3
+        "density": 0.1
       }
     ],
    "trafficLightGroups":

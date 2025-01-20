@@ -1,7 +1,12 @@
 #include "Road.h"
 
 Road::Road(int id, int roadSize, bool isPeriodic, double beta, int maxSpd, double brakeP, int initialNumCars, RandomNumberGenerator& gen, int queueSize = 100)
-    : roadID(id), roadSize(roadSize), isPeriodic(isPeriodic), beta(beta), maxSpeed(maxSpd), brakeProb(brakeP), initialNumCars(initialNumCars), rng(gen), spaceAveragedFlow(queueSize), averageTravelTimes(queueSize), residenceTimes(queueSize), travelTimes(queueSize), averageSpeed(0.0), cumulativeTimeSpaceAveragedFlow(0.0) 
+    : roadID(id), roadSize(roadSize), isPeriodic(isPeriodic), beta(beta), newCarInserted(false), maxSpeed(maxSpd), brakeProb(brakeP), initialNumCars(initialNumCars), rng(gen), averageTravelTimes(queueSize), residenceTimes(queueSize), travelTimes(queueSize), averageSpeed(0.0)
+{
+}
+
+Road::Road(int id, int roadSize, bool isPeriodic, double beta, int maxSpd, double brakeP, double initialDensity, RandomNumberGenerator& gen, int queueSize = 100)
+    : roadID(id), roadSize(roadSize), isPeriodic(isPeriodic), beta(beta), newCarInserted(false), maxSpeed(maxSpd), brakeProb(brakeP), initialDensity(initialDensity), rng(gen), averageTravelTimes(queueSize), residenceTimes(queueSize), travelTimes(queueSize), averageSpeed(0.0)
 {
 }
 
@@ -22,12 +27,14 @@ void Road::simulateStep(unsigned long long currentTime)
         {
             auto newCar = std::make_shared<Car>(0, roadID);
             sections[0]->currentCar = newCar;
-            carsPositions.push_back(0);
+            carsPositions.insert(carsPositions.begin(), 0);
+            newCarInserted = true;
         }
+        else
+            newCarInserted = false;
     }
-
-    std::sort(carsPositions.begin(), carsPositions.end(), std::greater<int>());
-    std::vector<int> newCarsPositions;
+    else
+        newCarInserted = false;
 
     for (auto& i : carsPositions)
     {
@@ -91,9 +98,6 @@ void Road::simulateStep(unsigned long long currentTime)
     }
 
     //Metrics based on current state (before moving cars)
-    calculateSpaceAveragedFlow();
-    calculateCumulativeTimeSpaceAveragedFlow();
-    calculateAverageTimeHeadway();
     logTimeHeadways(currentTime);
 
     //Move cars based on their current speeds
@@ -165,30 +169,36 @@ double Road::calculateRegionalDensity(int leftBoundary, int rightBoundary)
     return static_cast<double>(carCount) / regionLength;
 }
 
-void Road::calculateSpaceAveragedFlow()
+bool Road::didCarCrossPoint(int position, int newPosition, int measurementPoint)
 {
-    int totalFlow = 0;
-
-    for(auto& position : carsPositions)
+    if (isPeriodic)
     {
-        auto& car = sections[position]->currentCar;
-        if(car && car->speed > 0)
-            totalFlow++;
+        if (position < newPosition)
+            return (position < measurementPoint && newPosition >= measurementPoint);
+        else if (position > newPosition)
+            return (position < measurementPoint) || (newPosition >= measurementPoint);
     }
-
-    spaceAveragedFlow.push(static_cast<double>(totalFlow) / roadSize);
+    else
+        return (position < measurementPoint && newPosition >= measurementPoint);
+    
+    return false;
 }
 
-void Road::calculateCumulativeTimeSpaceAveragedFlow()
+void Road::calculateFlowAtPoints(int position, int newPosition)
 {
-    double flowSum = 0.0;
-    flowSum = std::accumulate(spaceAveragedFlow.begin(), spaceAveragedFlow.end(), 0);
-    cumulativeTimeSpaceAveragedFlow = flowSum / spaceAveragedFlow.size();
+    if (position < 0 || position >= roadSize || newPosition < 0)
+        return;
+
+    for (auto& point : timeHeadwayAndFlowPoints)
+    {
+        if(didCarCrossPoint(position, newPosition, point))
+            flowAtPoints.increment(point, 1);
+    }
 }
 
 int Road::calculateDistanceHeadwayBetweenTwoCars(int carIndex1, int carIndex2)
 {
-    std::sort(carsPositions.begin(), carsPositions.end(), std::greater<int>());
+    //std::sort(carsPositions.begin(), carsPositions.end(), std::greater<int>());
 
     //Ensure indices are within bounds
     if (carIndex1 < 0 || carIndex1 > carsPositions.size() ||
@@ -203,7 +213,7 @@ int Road::calculateDistanceHeadwayBetweenTwoCars(int carIndex1, int carIndex2)
 
 void Road::calculateAverageDistanceHeadway()
 {
-    std::sort(carsPositions.begin(), carsPositions.end(), std::greater<int>());
+    //std::sort(carsPositions.begin(), carsPositions.end(), std::greater<int>());
 
     if (carsPositions.size() < 2)
     {
@@ -222,37 +232,12 @@ void Road::calculateAverageDistanceHeadway()
     }
 }
 
-void Road::calculateAverageTimeHeadway()
+void Road::setupTimeHeadwayAndFlowPoints(int queueSize)
 {
-    if (spaceAveragedFlow.empty())
-    {
-        averageTimeHeadway = 0.0;
-        return;
-    }
-
-    double totalHeadway = 0.0;
-
-    for (double flow : spaceAveragedFlow)
-    {
-        if (flow > 0) //Avoid division by zero
-        {
-            totalHeadway += 1.0 / flow;
-        }
-        else
-        {
-            totalHeadway += std::numeric_limits<double>::infinity(); //Infinite headway for zero flow
-        }
-    }
-
-    averageTimeHeadway = totalHeadway / spaceAveragedFlow.size();
-}
-
-void Road::setupTimeHeadwayPoints(int queueSize)
-{
-    timeHeadwayPoints.clear();
+    timeHeadwayAndFlowPoints.clear();
 
     //General point in the middle of the road
-    timeHeadwayPoints.push_back(roadSize / 2);
+    timeHeadwayAndFlowPoints.push_back(roadSize / 2);
 
     //Points 4 sites before each traffic light
     for (int position : trafficLightPositions)
@@ -263,16 +248,18 @@ void Road::setupTimeHeadwayPoints(int queueSize)
         else
         {
             point = position - 4; //No wrapping for open boundaries
-            if (point < 0) continue; //Skip invalid points for open boundaries
+            while (point < 0)
+                point++;
         }
 
-        if (std::find(timeHeadwayPoints.begin(), timeHeadwayPoints.end(), point) == timeHeadwayPoints.end())
-            timeHeadwayPoints.push_back(point); //Avoid duplicates
+        if (std::find(timeHeadwayAndFlowPoints.begin(), timeHeadwayAndFlowPoints.end(), point) == timeHeadwayAndFlowPoints.end())
+            timeHeadwayAndFlowPoints.push_back(point);
     }
 
     //Initialize last timestamps and queues for all points
-    for (int point : timeHeadwayPoints)
+    for (int point : timeHeadwayAndFlowPoints)
     {
+        flowAtPoints.add(point, 0);
         lastTimestamps.add(point, std::numeric_limits<unsigned long long>::max()); //No car has passed yet
         loggedTimeHeadways.add(point, LimitedQueue<unsigned long long>(queueSize));
     }
@@ -280,7 +267,7 @@ void Road::setupTimeHeadwayPoints(int queueSize)
 
 void Road::logTimeHeadways(unsigned long long currentTime)
 {
-    for (int point : timeHeadwayPoints)
+    for (int point : timeHeadwayAndFlowPoints)
     {
         auto& section = sections[point];
         if (section->currentCar)
@@ -327,6 +314,68 @@ std::vector<int> Road::getRoadRepresentation() const
     }
 
     return representation;
+}
+
+int Road::measureQueueSize(int trafficLightIndex, int maxSpeedThreshold = 1)
+{
+    int queueSize = 0;
+    auto wrapIndex = [&](int index) -> int
+    {
+        return (index + roadSize) % roadSize;
+    };
+
+    int currentIndex = isPeriodic ? wrapIndex(trafficLightIndex - 1) : trafficLightIndex - 1;
+
+    while (true)
+    {
+        const auto& section = sections[isPeriodic ? wrapIndex(currentIndex) : currentIndex];
+
+        if (currentIndex != trafficLightIndex - 1 && section->trafficLight)
+            break;
+
+        if (section->currentCar)
+        {
+            if (section->currentCar->speed <= maxSpeedThreshold)
+                queueSize++;
+            else
+                break;
+        }
+        else
+            break;
+
+        currentIndex--;
+
+        if (!isPeriodic && currentIndex < 0)
+            break;
+    }
+
+    if (isPeriodic)
+    {
+        currentIndex = trafficLightIndex;
+        while (true)
+        {
+            const auto& section = sections[wrapIndex(currentIndex)];
+
+            if (section->trafficLight)
+                break;
+
+            if (section->currentCar)
+            {
+                if (section->currentCar->speed <= maxSpeedThreshold)
+                    queueSize++;
+                else
+                    break;
+            }
+            else
+                break;
+
+            currentIndex++;
+            if (wrapIndex(currentIndex) == wrapIndex(trafficLightIndex - 1))
+                break;
+        }
+    }
+
+    return queueSize;
 }
 
 std::vector<std::pair<int, int>> Road::detectJams()
@@ -404,26 +453,20 @@ std::vector<std::pair<int, int>> Road::detectJams()
     return jams;
 }
 
-
 void Road::addCars(int numCars, int position)
 {
     if (position == -1)
     {
-        std::uniform_int_distribution<> positionDist(0, roadSize - 1);
-        int position;
+        std::vector<int> positions(roadSize);
+        std::iota(positions.begin(), positions.end(), 0);
+        std::shuffle(positions.begin(), positions.end(), rng.getGenerator());
 
         for (int i = 0; i < numCars; ++i)
         {
-            do
-            {
-                position = positionDist(rng.getGenerator());
-            } while (sections[position]->currentCar);
-            
-            sections[position]->currentCar = std::make_shared<Car>(position, roadID);
-            carsPositions.push_back(position);
+            int selectedPosition = positions[i];
+            sections[selectedPosition]->currentCar = std::make_shared<Car>(selectedPosition, roadID);
+            carsPositions.push_back(selectedPosition);
         }
-        calculateGeneralDensity();
-        calculateAverageDistanceHeadway();
     }
     else
     {
@@ -433,14 +476,26 @@ void Road::addCars(int numCars, int position)
             carsPositions.push_back(position);
         }
     }
+
+    std::sort(carsPositions.begin(), carsPositions.end());
+
+    calculateGeneralDensity();
+    initialDensity = generalDensity;
+    calculateAverageDistanceHeadway();
+}
+
+void Road::addCarsBasedOnDensity(double density)
+{
+    if (density < 0.0 || density > 1.0) 
+        std::cerr << "Density can not be smaller than 0.0 or bigger than 1.0." << std::endl;
+
+    initialNumCars = static_cast<int>(std::trunc(roadSize*density));
+
+    addCars(static_cast<int>(std::trunc(roadSize*density)));
 }
 
 void Road::moveCars()
 {
-    std::vector<int> newCarsPositions;
-
-    std::sort(carsPositions.begin(), carsPositions.end(), std::greater<int>());
-
     for (auto& i : carsPositions)
     {
         auto& car = sections[i]->currentCar;
@@ -502,6 +557,9 @@ void Road::moveCars()
             {
                 newPos = (i + car->speed) % roadSize;
 
+                if (sections[newPos]->currentCar)
+                    std::cout << "There is already a car in the new position" << std::endl;
+
                 if (sections[newPos]->currentCar == nullptr)
                 {
                     if (sections[newPos]->trafficLight && !sections[newPos]->trafficLight->state)
@@ -515,6 +573,7 @@ void Road::moveCars()
                     car->position = newPos;
                     sections[i]->currentCar = nullptr;
                     newCarsPositions.push_back(newPos);
+                    calculateFlowAtPoints(i, newPos);
                 }
                 else
                 {
@@ -533,6 +592,8 @@ void Road::moveCars()
         }
     }
     carsPositions = std::move(newCarsPositions);
+    newCarsPositions.clear();
+    std::sort(carsPositions.begin(), carsPositions.end(), std::greater<int>());
 }
 
 
@@ -562,7 +623,6 @@ std::pair<int, std::shared_ptr<Road>> Road::decideTargetRoad(RoadSection& sectio
     return std::make_pair(-1, std::shared_ptr<Road>());
 }
 
-
 int Road::calculateDistanceToSharedSection(RoadSection& currentSection)
 {
     int distance = 0;
@@ -579,7 +639,6 @@ int Road::calculateDistanceToSharedSection(RoadSection& currentSection)
 
     return roadSize;
 }
-
 
 int Road::calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, int currentPosition, int distanceSharedSection)
 {

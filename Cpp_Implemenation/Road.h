@@ -22,31 +22,34 @@ public:
     int roadSize;
     bool isPeriodic;
     double generalDensity;
-    LimitedQueue<double> spaceAveragedFlow;
-    double cumulativeTimeSpaceAveragedFlow;
     double averageDistanceHeadway;
-    double averageTimeHeadway;
     double averageSpeed;
     std::vector<std::shared_ptr<RoadSection>> sections;
     std::vector<std::shared_ptr<Road>> connectedRoads;
     double alpha;
     double beta;
+    bool newCarInserted;
     int maxSpeed;
     double brakeProb;
     Dictionary<int, double> changingRoadProbs;
     int initialNumCars;
+    double initialDensity;
     std::vector<int> carsPositions;
+    std::vector<int> newCarsPositions;
     std::vector<int> trafficLightPositions;
+    std::vector<int> sharedSectionsPositions;
     LimitedQueue<int> residenceTimes;
     LimitedQueue<int> travelTimes;
     LimitedQueue<double> averageTravelTimes;
-    std::vector<int> timeHeadwayPoints; // Indices of time headway points
-    Dictionary<int, unsigned long long> lastTimestamps; // Last timestamp a car passed each point
-    Dictionary<int, LimitedQueue<unsigned long long>> loggedTimeHeadways; // Logged time headways for each point
+    Dictionary<int, int> flowAtPoints;
+    std::vector<int> timeHeadwayAndFlowPoints; //Indices of time headway points
+    Dictionary<int, unsigned long long> lastTimestamps; //Last timestamp a car passed each point
+    Dictionary<int, LimitedQueue<unsigned long long>> loggedTimeHeadways; //Logged time headways for each point
     std::vector<std::shared_ptr<TrafficLight>> trafficLights;
     RandomNumberGenerator& rng;
 
     Road(int id, int roadSize, bool isPeriodic, double beta, int maxSpd, double brakeP, int initialNumCars, RandomNumberGenerator& gen, int queueSize);
+    Road(int id, int roadSize, bool isPeriodic, double beta, int maxSpd, double brakeP, double initialDensity, RandomNumberGenerator& gen, int queueSize);
     Road(const Road&) = delete;
     Road& operator=(const Road&) = delete;
     void setupSections();
@@ -55,18 +58,19 @@ public:
     void calculateAverageTravelTime();
     void calculateGeneralDensity();
     double calculateRegionalDensity(int leftBoundary, int rightBoundary);
-    void calculateSpaceAveragedFlow();
-    void calculateCumulativeTimeSpaceAveragedFlow();
+    bool didCarCrossPoint(int position, int newPosition, int measurementPoint);
+    void calculateFlowAtPoints(int position, int newPosition);
     int calculateDistanceHeadwayBetweenTwoCars(int carIndex1, int carIndex2);
     void calculateAverageDistanceHeadway();
-    void calculateAverageTimeHeadway();
     void calculateAverageSpeed();
-    void setupTimeHeadwayPoints(int queueSize);
+    void setupTimeHeadwayAndFlowPoints(int queueSize);
     void logTimeHeadways(unsigned long long currentTime);
+    int measureQueueSize(int trafficLightIndex, int maxSpeedThreshold);
     const Dictionary<int, LimitedQueue<unsigned long long>>& getLoggedTimeHeadways() const;
     std::vector<int> getRoadRepresentation() const;
     std::vector<std::pair<int, int>> detectJams();
     void addCars(int numCars, int position = -1);
+    void addCarsBasedOnDensity(double density);
     int calculateDistanceToNextCarOrTrafficLight(RoadSection& currentSection, int currentPosition, int distanceSharedSection);
     bool anyCarInSharedSection(RoadSection& section);
     int calculateDistanceToSharedSection(RoadSection& currentSection);

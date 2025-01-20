@@ -1,14 +1,16 @@
 #include "GreenWaveController.h"
 
-GreenWaveController::GreenWaveController(unsigned int cycleTime, double vMax, double p, size_t numberOfColumns)
-    : TrafficLightController(cycleTime), v_max(vMax), p(p), numberOfColumns(numberOfColumns)
+GreenWaveController::GreenWaveController(unsigned int cycleTime, double vMax, double p, int columns)
+    : TrafficLightController(cycleTime), vMax(vMax), p(p)
 {
-    if (v_max <= 0 || p < 0 || p > 1)
+    if (vMax <= 0 || p < 0 || p > 1)
         throw std::invalid_argument("Invalid v_max or p values.");
-    if (numberOfColumns == 0)
+    if (columns == 0)
         throw std::invalid_argument("numberOfColumns must be greater than 0.");
-
-    v_free = v_max - p; //Calculate free-flow speed dynamically
+    else
+        numberOfColumns = columns;
+    
+    vFree = vMax - p; //Calculate free-flow speed dynamically
 }
 
 void GreenWaveController::initialize()
@@ -31,23 +33,31 @@ void GreenWaveController::update(unsigned long long currentTime)
 
         for (size_t j = 0; j < group->trafficLights.size(); ++j)
         {
+            updateParametersBasedOnRoad(group->trafficLights[j]->distanceToPreviousTrafficLight, group->trafficLights[j]->getRoadSpeed(), group->trafficLights[j]->getBrakeProb());
+            
             //Calculate offset for the current light based on grid position
-            unsigned int offset = calculateOffset(rowIndex, colIndex, distanceBetweenIntersections, v_free);
+            unsigned int offset = calculateOffset(rowIndex, colIndex, group->trafficLights[j]->distanceToPreviousTrafficLight, vFree);
             bool isGreen = ((currentTime + offset) / (cycleTime / 2)) % 2 == 0;
             group->trafficLights[j]->state = isGreen;
         }
     }
 }
 
-void GreenWaveController::calculateCycleTime(double distanceBetweenIntersections)
+void GreenWaveController::updateParametersBasedOnRoad(double distanceBetweenIntersections, int roadVMax, double roadP)
 {
     if (distanceBetweenIntersections <= 0)
         throw std::invalid_argument("Invalid parameter for cycle time calculation.");
 
-    double v_free = v_max - p;
-    double T_free = distanceBetweenIntersections / v_free;
+    if (roadVMax > 0)
+        vMax = roadVMax;
+    
+    if (roadP <= 1.0)
+        p = roadP;
 
-    cycleTime = static_cast<unsigned int>(std::round(T_free * 2));
+    vFree = vMax - p;
+    double TFree = distanceBetweenIntersections / vFree;
+
+    cycleTime = static_cast<unsigned int>(std::round(TFree * 2));
 
     if (cycleTime < 1)
         throw std::runtime_error("Calculated cycle time is too short to be realistic.");

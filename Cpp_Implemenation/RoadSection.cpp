@@ -20,6 +20,13 @@ void RoadSection::addCar()
 void RoadSection::connect(std::weak_ptr<RoadSection> connectedSection)
 {
     connectedSections.push_back(connectedSection);
+
+    auto roadPtr = road.lock();
+    if (roadPtr)
+        roadPtr->sharedSectionsPositions.push_back(index);
+    else
+        std::cerr << "Error: Road has expired in RoadSection." << std::endl;
+
     isSharedSection = true;
 }
 

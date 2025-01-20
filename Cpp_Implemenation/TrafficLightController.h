@@ -9,13 +9,15 @@ class TrafficLightController : public std::enable_shared_from_this<TrafficLightC
 {
 protected:
     std::vector<std::shared_ptr<TrafficLightGroup>> trafficLightGroups;
+    Dictionary<int, LimitedQueue<unsigned long long>> waitingTimes;
     unsigned int cycleTime;
 
     double calculateFreeFlowTime(std::shared_ptr<TrafficLight> trafficLight) const;
 
 public:
-    TrafficLightController(unsigned int cycleTime = 60);
-    virtual ~TrafficLightController();
+    int numberOfColumns;
+
+    TrafficLightController(unsigned int cycleTime = 30);
 
     void addTrafficLightGroup(std::shared_ptr<TrafficLightGroup> trafficLightGroup);
 
@@ -25,6 +27,7 @@ public:
 
     unsigned int getCycleTime() const;
     void setCycleTime(unsigned int time);
+    virtual ~TrafficLightController();
 };
 
 #endif

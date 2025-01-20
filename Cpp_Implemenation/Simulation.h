@@ -38,22 +38,28 @@ private:
     unsigned long long episodes;
     int currentHour;
     int currentDay;
+    int currentMinute;
     int queueSize;
-    bool undefinedDuration;
+    int vMax;
+    double brakeProbability;
     nlohmann::json simulationResults;
     std::vector<int> roadsWithAlpha;
     std::vector<int> roadsWithBeta;
     Dictionary<int, double> alphaWeights;
     std::shared_ptr<TrafficLightController> trafficLightController;
+    short executionType;
+    std::string resultsPath;
 
 public:
-    Simulation(const std::string& configFilePath);
+    Simulation(const std::string& configFilePath, std::string resultsPath, short executionType);
     void setup();
     int countTotalCars() const;
     void printSimulationSettings() const;
     void run();
+    void execute();
     void clearScreen() const;
     void printRoadStates() const;
+    void createHeader();
     void collectMetrics(unsigned long long episode);
     void serializeResults(const std::string& filename) const; 
 };

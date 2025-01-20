@@ -41,8 +41,8 @@ void SyncController::calculateCycleTime()
     if (trafficLightGroups.empty() || trafficLightGroups[0]->trafficLights.empty())
         throw std::runtime_error("No traffic lights to calculate cycle time.");
 
-    double T_free = calculateFreeFlowTime(trafficLightGroups[0]->trafficLights[0]);
-    cycleTime = static_cast<unsigned int>(std::round(T_free * 2));
+    double TFree = calculateFreeFlowTime(trafficLightGroups[0]->trafficLights[0]);
+    cycleTime = static_cast<unsigned int>(std::round(TFree * 2));
     phaseTime = cycleTime / 2;
 }
 

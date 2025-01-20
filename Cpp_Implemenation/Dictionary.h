@@ -2,6 +2,7 @@
 #define DICTIONARY_H
 
 #include <map>
+#include <vector>
 #include <string>
 #include <stdexcept>
 #include <iostream>
@@ -17,6 +18,8 @@ public:
     ValueType get(const KeyType &key) const;
     void remove(const KeyType &key);
     bool isThere(const KeyType &key) const;
+    std::vector<KeyType> getKeys() const;
+    void increment(const KeyType &key, const ValueType &incrementValue);
 
     auto begin() { return data.begin(); }
     auto end() { return data.end(); }

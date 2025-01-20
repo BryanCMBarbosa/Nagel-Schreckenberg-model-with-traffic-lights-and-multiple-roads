@@ -12,6 +12,9 @@ class TrafficLightGroup : public std::enable_shared_from_this<TrafficLightGroup>
 {
 public:
     std::vector<std::shared_ptr<TrafficLight>> trafficLights;
+    int degreeCentrality;
+    double betweennessCentrality;
+    double closenessCentrality;
     
     TrafficLightGroup();
 

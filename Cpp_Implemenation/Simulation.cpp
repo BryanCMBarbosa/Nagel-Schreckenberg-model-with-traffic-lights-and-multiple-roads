@@ -1,6 +1,6 @@
 #include "Simulation.h"
 
-Simulation::Simulation(const std::string& configFilePath) : undefinedDuration(false)
+Simulation::Simulation(const std::string& configFilePath, std::string resultsPath = "./", short executionType = 0) : resultsPath(resultsPath), executionType(executionType)
 {
     std::ifstream file(configFilePath);
     if (file.is_open())
@@ -19,13 +19,21 @@ void Simulation::setup()
 
     if (config["simulation"].contains("episodes"))
         episodes = config["simulation"]["episodes"];
-    else
-        undefinedDuration = true;
 
     if (config["simulation"].contains("queueSize"))
         queueSize = config["simulation"]["queueSize"];
     else
         queueSize = 10;
+
+    if (config["simulation"].contains("vMax"))
+        vMax = config["simulation"]["vMax"];
+    else
+        vMax = 3;
+
+    if (config["simulation"].contains("brakeProbability"))
+        brakeProbability = config["simulation"]["brakeProbability"];
+    else
+        brakeProbability = 0.1;
 
     const auto& roadsConfig = config["simulation"]["roads"];
 
@@ -37,11 +45,20 @@ void Simulation::setup()
         int roadSize = roadConfig.value("roadSize", 50);
 
         int numCars = 0;
-        if (roadConfig.contains("numCars"))
+        double density = 0.0;
+        if (roadConfig.contains("density"))
+            density = roadConfig["density"];
+        if (density <= 0.0 && roadConfig.contains("numCars"))
             numCars = roadConfig["numCars"];
+        
+        int maxSpeed = vMax;
+        if (roadConfig.contains("maxSpeed"))
+            int maxSpeed = roadConfig.value("maxSpeed", 3);
 
-        int maxSpeed = roadConfig.value("maxSpeed", 5);
-        double brakeProb = roadConfig.value("brakeProbability", 0.1);
+        double brakeProb = brakeProbability;
+        if (roadConfig.contains("brakeProbability"))
+            brakeProb = roadConfig.value("brakeProbability", 0.1);
+        
         bool isPeriodic = roadConfig.value("isPeriodic", true);
         double alpha = roadConfig.value("alphaWeight", 0.0);
         if (alpha > 0.0)
@@ -55,10 +72,20 @@ void Simulation::setup()
         if (beta > 0.0)
             roadsWithBeta.push_back(roadID);
 
-        auto road = std::make_shared<Road>(roadID, roadSize, isPeriodic, beta, maxSpeed, brakeProb, numCars, rng, queueSize);
-        roads.emplace_back(road);
-        road->setupSections();
-        road->addCars(numCars);
+        if (numCars == 0)
+        {
+            auto road = std::make_shared<Road>(roadID, roadSize, isPeriodic, beta, vMax, brakeProbability, density, rng, queueSize);
+            roads.emplace_back(road);
+            road->setupSections();
+            road->addCarsBasedOnDensity(density);
+        }
+        else
+        {
+            auto road = std::make_shared<Road>(roadID, roadSize, isPeriodic, beta, vMax, brakeProbability, numCars, rng, queueSize);
+            roads.emplace_back(road);
+            road->setupSections();
+            road->addCars(numCars);
+        }
     }
 
     double alphasSum = std::accumulate(alphas.begin(), alphas.end(), 0.0);
@@ -97,6 +124,8 @@ void Simulation::setup()
                 else
                     std::cerr << "Not enough parameters on shared section specifications" << std::endl;
             }
+            for (auto& road : roads)
+                std::sort(road->sharedSectionsPositions.begin(), road->sharedSectionsPositions.end());
         }
     }
     
@@ -183,14 +212,14 @@ void Simulation::setup()
     }
     for (auto& road : roads)
     {
-        road->setupTimeHeadwayPoints(queueSize);
+        road->setupTimeHeadwayAndFlowPoints(queueSize);
 
         std::sort(road->trafficLightPositions.begin(), road->trafficLightPositions.end());
         for (auto& TLPosition : road->trafficLightPositions)
             road->sections[TLPosition]->trafficLight->calculateDistanceToPreviousTrafficLight();
     }
 
-    if (config["simulation"].contains("controllerType"))
+    if (config["simulation"].contains("controllerType") && !trafficLightGroups.empty())
     {
         std::string controllerType = config["simulation"]["controllerType"].get<std::string>();
         if (controllerType == "synchronized")
@@ -211,12 +240,13 @@ void Simulation::setup()
             trafficLightController->addTrafficLightGroup(TLGroup);
     }
 
-    trafficLightController->initialize();
+    if (!trafficLightGroups.empty())
+        trafficLightController->initialize();
 
     currentDay = 0;
     currentHour = 0;
 
-    printSimulationSettings();
+    //printSimulationSettings();
 }
 
 
@@ -254,7 +284,23 @@ void Simulation::printSimulationSettings() const
 
 void Simulation::run()
 {
-    std::cout << "Running simulation...\n";
+    switch (executionType)
+    {
+    case 0: //Basic execution; no printing; no real-time plotting.
+        execute();
+        break;
+    
+    case 1:
+        break;
+
+    default:
+        break;
+    }
+}
+
+
+void Simulation::execute()
+{
     int numberRoads = roads.size();
 
     TrafficVolumeGenerator trafficGen(
@@ -269,47 +315,34 @@ void Simulation::run()
     simulationResults["episodes"] = nlohmann::json::array();
 
     auto now = std::chrono::system_clock::now();
-    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    auto now_time_t = std::chrono::system_clock::to_time_t(now);
+    auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
     std::ostringstream simInfoStream;
-    simInfoStream << std::put_time(std::localtime(&now_time), "%Y-%m-%d_%H-%M-%S");
-    simInfoStream << "eps_" << episodes
+    simInfoStream << std::put_time(std::localtime(&now_time_t), "%Y-%m-%d_%H-%M-%S");
+    simInfoStream << "." << std::setfill('0') << std::setw(3) << now_ms.count();
+    simInfoStream << "_eps_" << episodes
                   << "_roads_" << numberRoads;
 
     std::string filename = "sim_results_" + simInfoStream.str() + ".json";
-
-    if (undefinedDuration)
+    for (unsigned long long episode = 0; episode < episodes; episode++)
     {
-        //Handle undefined duration if applicable
+        currentMinute = (episode / 60) % 60;
+        currentHour = (episode / 3600) % 24; //Calculate current hour based on elapsed time
+        currentDay = (episode / 86400) % 7;  //Calculate current day of the week (0=Sunday, 6=Saturday)
+        trafficGen.update(episode, currentDay);
+
+        if (trafficLightController)
+            trafficLightController->update(episode);
+
+        for (int roadIndex = 0; roadIndex < numberRoads; roadIndex++)
+            roads[roadIndex]->simulateStep(episode);
+
+        collectMetrics(episode);
     }
-    else
-    {
-        printRoadStates();
-        for (unsigned long long episode = 0; episode < episodes; episode++)
-        {
-            currentHour = (episode / 3600) % 24; //Calculate current hour based on elapsed time
-            currentDay = (episode / 86400) % 7;  //Calculate current day of the week (0=Sunday, 6=Saturday)
-            trafficGen.update(episode, currentDay);
 
-            if (trafficLightController)
-                trafficLightController->update(episode);
-            /*
-            for (auto& group : trafficLightGroups)
-                group->update();
-            */
-
-            for (int roadIndex = 0; roadIndex < numberRoads; roadIndex++)
-                roads[roadIndex]->simulateStep(episode);
-
-            collectMetrics(episode);
-
-            printRoadStates();
-            std::this_thread::sleep_for(std::chrono::milliseconds(150));
-        }
-
-        serializeResults("simulation_results.json");
-    }
+    serializeResults(filename);
 }
-
 
 void Simulation::clearScreen() const
 {
@@ -356,58 +389,166 @@ void Simulation::printRoadStates() const
     }
 }
 
+void Simulation::createHeader()
+{
+    nlohmann::json headerData;
+
+    headerData["simulationConfig"]["episodes"] = episodes;
+    headerData["simulationConfig"]["queueSize"] = queueSize;
+    headerData["simulationConfig"]["vMax"] = vMax;
+    headerData["simulationConfig"]["brakeProbability"] = brakeProbability;
+
+    for (const auto& road : roads)
+    {
+        nlohmann::json roadInfo;
+        roadInfo["roadID"] = road->roadID;
+        roadInfo["roadSize"] = road->roadSize;
+        roadInfo["isPeriodic"] = road->isPeriodic;
+        roadInfo["alpha"] = road->alpha;
+        roadInfo["beta"] = road->beta;
+        roadInfo["maxSpeed"] = road->maxSpeed;
+        roadInfo["brakeProb"] = road->brakeProb;
+        roadInfo["initialNumCars"] = road->initialNumCars;
+        roadInfo["initialDensity"] = road->initialDensity;
+
+        nlohmann::json tlArray;
+        for (auto& tl : road->trafficLights)
+        {
+            nlohmann::json tlInfo;
+            tlInfo["timeOpen"]     = tl->timeOpen;
+            tlInfo["timeClosed"]   = tl->timeClosed;
+            tlInfo["roadPosition"] = tl->roadPosition;
+            tlInfo["externalControl"] = tl->externalControl;
+            tlArray.push_back(tlInfo);
+        }
+        roadInfo["trafficLights"] = tlArray;
+
+        headerData["roads"].push_back(roadInfo);
+    }
+
+    nlohmann::json tlGroupsArray = nlohmann::json::array();
+    for (const auto& group : trafficLightGroups)
+    {
+        nlohmann::json groupData;
+        groupData["degreeCentrality"]      = group->degreeCentrality;
+        groupData["betweennessCentrality"] = group->betweennessCentrality;
+        groupData["closenessCentrality"]   = group->closenessCentrality;
+ 
+        nlohmann::json groupTLs = nlohmann::json::array();
+        for (auto& tl : group->trafficLights)
+        {
+            nlohmann::json tlInGroup;
+            tlInGroup["roadPosition"] = tl->roadPosition;
+            groupTLs.push_back(tlInGroup);
+        }
+        groupData["trafficLights"] = groupTLs;
+
+        tlGroupsArray.push_back(groupData);
+    }
+    headerData["trafficLightGroups"] = tlGroupsArray;
+
+    simulationResults["header"] = headerData;
+}
+
+
 void Simulation::collectMetrics(unsigned long long episode)
 {
     nlohmann::json episodeData;
-    episodeData["episode"] = episode;
-    episodeData["currentDay"] = currentDay;
-    episodeData["currentHour"] = currentHour;
+    episodeData["episode"]       = episode;
+    episodeData["currentDay"]    = currentDay;
+    episodeData["currentHour"]   = currentHour;
+    episodeData["currentMinute"] = currentMinute;
 
     for (const auto& road : roads)
     {
         nlohmann::json roadData;
         roadData["roadID"] = road->roadID;
         roadData["generalDensity"] = road->generalDensity;
-        roadData["cumulativeTimeSpaceAveragedFlow"] = road->cumulativeTimeSpaceAveragedFlow;
         roadData["averageDistanceHeadway"] = road->averageDistanceHeadway;
-        roadData["averageTimeHeadway"] = road->averageTimeHeadway;
         roadData["averageSpeed"] = road->averageSpeed;
         roadData["alpha"] = road->alpha;
         roadData["beta"] = road->beta;
         roadData["numCars"] = road->carsPositions.size();
-        roadData["roadRepresentation"] = road->getRoadRepresentation();
+        //roadData["roadRepresentation"] = road->getRoadRepresentation();
 
-        nlohmann::json timeHeadwaysData;
+        nlohmann::json timeHeadwaysData = nlohmann::json::array();
         const auto& timeHeadways = road->getLoggedTimeHeadways();
         for (const auto& [point, queue] : timeHeadways)
         {
             nlohmann::json pointData;
             pointData["pointIndex"] = point;
-
             std::vector<unsigned long long> timeHeadwayValues(queue.begin(), queue.end());
             pointData["timeHeadways"] = timeHeadwayValues;
-
             timeHeadwaysData.push_back(pointData);
         }
         roadData["timeHeadways"] = timeHeadwaysData;
+
+        nlohmann::json flowData = nlohmann::json::array();
+        const auto& flow = road->flowAtPoints;
+        for (const auto& [point, value] : flow)
+        {
+            nlohmann::json pointData;
+            pointData["pointIndex"] = point;
+            pointData["flow"] = value;
+            flowData.push_back(pointData);
+        }
+        roadData["flow"] = flowData;
+
+        std::vector<int> resTimesVec(road->residenceTimes.begin(), road->residenceTimes.end());
+        roadData["residenceTimes"] = resTimesVec;
+        std::vector<int> travelTimesVec(road->travelTimes.begin(), road->travelTimes.end());
+        roadData["travelTimes"] = travelTimesVec;
+        std::vector<double> avgTravelVec(road->averageTravelTimes.begin(), road->averageTravelTimes.end());
+        roadData["averageTravelTimes"] = avgTravelVec;
+
+        roadData["newCarInserted"] = road->newCarInserted;
+
+        nlohmann::json trafficLightsArray = nlohmann::json::array();
+        for (auto& tl : road->trafficLights)
+        {
+            nlohmann::json tlData;
+            tlData["isGreen"] = tl->isGreen();
+            tlData["timer"]   = tl->timer;
+            trafficLightsArray.push_back(tlData);
+        }
+        roadData["trafficLights"] = trafficLightsArray;
+
         episodeData["roads"].push_back(roadData);
     }
+
+    nlohmann::json tlGroupsData = nlohmann::json::array();
+    for (const auto& group : trafficLightGroups)
+    {
+        nlohmann::json groupData;
+        tlGroupsData.push_back(groupData);
+    }
+    episodeData["trafficLightGroups"] = tlGroupsData;
 
     simulationResults["episodes"].push_back(episodeData);
 }
 
-
 void Simulation::serializeResults(const std::string& filename) const
 {
-    std::ofstream file(filename);
+    std::string fullPath = resultsPath + "/" + filename;
+    std::string modifiedPath = fullPath;
+    int counter = 1;
+
+    while (std::filesystem::exists(modifiedPath))
+    {
+        size_t dotPos = fullPath.find_last_of('.');
+        if (dotPos == std::string::npos)
+            modifiedPath = fullPath + "_" + std::to_string(++counter);
+        else
+            modifiedPath = fullPath.substr(0, dotPos) + "_" + std::to_string(++counter) + fullPath.substr(dotPos);
+    }
+
+    std::ofstream file(modifiedPath);
     if (file.is_open())
     {
         file << std::setw(4) << simulationResults << std::endl;
         file.close();
-        std::cout << "Results serialized to " << filename << std::endl;
+        std::cout << "Results serialized to " << modifiedPath << std::endl;
     }
     else
-    {
-        std::cerr << "Unable to open file for serialization: " << filename << std::endl;
-    }
+        std::cerr << "Unable to open file for serialization: " << modifiedPath << std::endl;
 }
