@@ -12,9 +12,14 @@ class TrafficLightGroup : public std::enable_shared_from_this<TrafficLightGroup>
 {
 public:
     std::vector<std::shared_ptr<TrafficLight>> trafficLights;
+    int column;
+    int row;
+    int gridHeight;
+    int gridWidth;
     int degreeCentrality;
     double betweennessCentrality;
     double closenessCentrality;
+    std::vector<short> cyclesDuration;
     
     TrafficLightGroup();
 
@@ -22,6 +27,12 @@ public:
     void initialize();
     void update();
     void setTransitionTime(int time);
+    void setCoords(int column, int row);
+    void setGridShape(int h, int w);
+    void calculateCentralities();
+    void calculateDegreeCentrality();
+    void calculateClosenessCentrality();
+    void calculateBetweennessCentrality();
 
 private:
     int currentIndex;

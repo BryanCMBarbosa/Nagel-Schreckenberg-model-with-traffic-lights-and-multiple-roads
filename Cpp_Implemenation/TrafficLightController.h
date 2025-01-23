@@ -4,30 +4,21 @@
 #include <vector>
 #include <memory>
 #include "TrafficLightGroup.h"
+#include "RandomNumberGenerator.h"
 
-class TrafficLightController : public std::enable_shared_from_this<TrafficLightController>
+class TrafficLightController
 {
-protected:
-    std::vector<std::shared_ptr<TrafficLightGroup>> trafficLightGroups;
-    Dictionary<int, LimitedQueue<unsigned long long>> waitingTimes;
-    unsigned int cycleTime;
-
-    double calculateFreeFlowTime(std::shared_ptr<TrafficLight> trafficLight) const;
-
 public:
-    int numberOfColumns;
+    virtual void updateTrafficLights(unsigned long long timeStep) = 0;
+    virtual ~TrafficLightController() = default;
 
-    TrafficLightController(unsigned int cycleTime = 30);
+    void addIntersection(const std::shared_ptr<TrafficLightGroup>& group);
+    void initialize();
 
-    void addTrafficLightGroup(std::shared_ptr<TrafficLightGroup> trafficLightGroup);
+protected:
+    std::vector<std::shared_ptr<TrafficLightGroup>> intersections;
 
-    virtual void initialize() = 0;
-
-    virtual void update(unsigned long long currentTime) = 0;
-
-    unsigned int getCycleTime() const;
-    void setCycleTime(unsigned int time);
-    virtual ~TrafficLightController();
+    TrafficLightController() = default;
 };
 
 #endif

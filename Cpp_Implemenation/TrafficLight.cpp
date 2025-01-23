@@ -2,8 +2,8 @@
 #include <iostream>
 #include <algorithm>
 
-TrafficLight::TrafficLight(bool externalControl, int timeOpen, int timeClosed, std::shared_ptr<Road> ownerRoad, int roadPosition)
-    : externalControl(externalControl), timeOpen(timeOpen), timeClosed(timeClosed), ownerRoad(ownerRoad), roadPosition(roadPosition), state(false), timer(0)
+TrafficLight::TrafficLight(bool externalControl, std::shared_ptr<Road> ownerRoad, int roadPosition)
+    : externalControl(externalControl), ownerRoad(ownerRoad), roadPosition(roadPosition), state(false), elapsedTime(0)
 {
 }
 
@@ -59,13 +59,14 @@ double TrafficLight::getBrakeProb() const
         throw std::runtime_error("Road is no longer accessible.");
 }
 
-void TrafficLight::turnGreen()
+void TrafficLight::toggle()
 {
-    state = true;
-    timer = 0;
+    state = !state;
+    elapsedTime = 0;
 }
 
-bool TrafficLight::isGreen() const
+void TrafficLight::setTimeOpen(short time)
 {
-    return state;
+    if (!state)
+        timeOpen = time;
 }
